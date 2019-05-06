@@ -1,0 +1,1048 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<pkg:Library
+  xsi:schemaLocation="urn:schemas-www-wisware.nl-scriptingpackages ../XmlSchemas.Common.XmlScript/XMLScripting.Packages.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:pkg="urn:schemas-www-wisware.nl-scriptingpackages"
+  xmlns:sys="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:ado="urn:schemas-www-wisware.nl-xmlscripting-ado"
+  xmlns:fil="urn:schemas-www-wisware.nl-xmlscripting-filemanagement"
+  xmlns:fwl="urn:schemas-www-wisware.nl-xmlscripting-windowsfirewall"
+  xmlns:inx="urn:schemas-www-wisware.nl-xmlscripting-index"
+  xmlns:lil="urn:schemas-www-wisware.nl-xmlscripting-linkedlist"
+  xmlns:msx="urn:schemas-www-wisware.nl-xmlscripting-xml"
+  xmlns:reg="urn:schemas-www-wisware.nl-xmlscripting-registry"
+  xmlns:rep="urn:schemas-www-wisware.nl-xmlscripting-report"
+  xmlns:sts="urn:schemas-www-wisware.nl-xmlscripting-showstatus"
+  xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
+  xmlns:stm="urn:schemas-www-wisware.nl-xmlscripting-statemanagement">
+  <Uses>
+    <Use Identifier="VISAInstrument"/>
+  </Uses>
+
+  <Type>
+    <Enumeration Identifier="TImageType" Elements="BMP, PNG"/>
+
+    <Enumeration Identifier="THeaderType" Elements="Off, Short, Long"/>
+
+    <Enumeration Identifier="TTraceType" Elements="CH1, CH2, CH3, CH4, Math, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15"/>
+
+    <Enumeration Identifier="THWTraceType" Elements="CH1, CH2, CH3, CH4, TA, TB, TC, TD"/>
+
+    <Enumeration Identifier="TChannelType" Elements="CH1, CH2, CH3, CH4"/>
+
+    <Enumeration Identifier="TTriggerMode" Elements="Auto, Normal, Single, Stop"/>
+
+    <Enumeration Identifier="TMemSize" Elements="ms7K, ms14K, ms70K, ms140K, ms700K, ms1M4, ms7M, ms14M"/>
+
+    <Enumeration Identifier="TAvgTime" Elements="avg4, avg16, avg32, avg64, avg128, avg256, avg512, avg1024"/>
+
+    <Enumeration Identifier="TWGenParameter" Elements="OUTP, WVTP, FREQ, AMPL, OFST, DCOFST, DUTY, SYMM, WIDTH, STDEV, MEAN, LOAD"/>
+
+    <Enumeration Identifier="TAveragingOptimalisation" Elements="Rising"/>
+
+    <Enumeration Identifier="TStatusFlags" Elements="SignalAcquired = 1 shl 1, TriggerIsRready = 1 shl 13"/>
+
+    <DataClass Identifier="TSiglentSDS1104X" Inherit="TVISAInstrument">
+
+    </DataClass>
+
+    <DataClass Identifier="TSiglentSAG1021Base">
+      <Field Identifier="Message" Type="IMessage"/>
+      <Field Identifier="_UpdateCnt" Type="Integer"/>
+      <Field Identifier="_UpdatedOUTP" Type="Boolean"/>
+      <Field Identifier="_UpdatedWVTP" Type="Boolean"/>
+      <Field Identifier="_UpdatedFREQ" Type="Boolean"/>
+      <Field Identifier="_UpdatedAMPL" Type="Boolean"/>
+      <Field Identifier="_UpdatedOFST" Type="Boolean"/>
+      <Field Identifier="_UpdatedDCOFST" Type="Boolean"/>
+      <Field Identifier="_UpdatedDUTY" Type="Boolean"/>
+      <Field Identifier="_UpdatedSYMM" Type="Boolean"/>
+      <Field Identifier="_UpdatedWIDTH" Type="Boolean"/>
+      <Field Identifier="_UpdatedSTDEV" Type="Boolean"/>
+      <Field Identifier="_UpdatedMEAN" Type="Boolean"/>
+      <Field Identifier="_UpdatedLOAD" Type="Boolean"/>
+    </DataClass>
+
+    <DataClass Identifier="TSquareWave" Inherit="TSiglentSAG1021Base">
+
+    </DataClass>
+    
+    <DataClass Identifier="TSummedFrameSamplesOptions">
+      <Field Identifier="LimitSamples" Type="UInt32"/>
+    </DataClass>
+  </Type>
+
+  <Constants>
+    <Constant Identifier="AwgFixedSamples" Type="Int32" Expression="16384"/>
+    <Constant Identifier="AwgMinValue" Type="Int32" Expression="-32768"/>
+    <Constant Identifier="AwgMaxValue" Type="Int32" Expression="32767"/>
+
+    <Constant Identifier="sErrorGettingAWGWaveData" Type="string" Expression="'Error getting AWG WaveData'"/>
+    <Constant Identifier="sErrorGettingScreenCapture" Type="string" Expression="'Error getting ScreenCapture'"/>
+    <Constant Identifier="sErrorGettingWaveData" Type="string" Expression="'Error getting WaveData'"/>
+    <Constant Identifier="sErrorReadingHeader" Type="string" Expression="'Error reading header'"/>
+    <Constant Identifier="sErrorReadingWaveLength" Type="string" Expression="'Error reading WaveLength'"/>
+    <Constant Identifier="sErrorReadingWaveData" Type="string" Expression="'Error reading wave data'"/>
+    <Constant Identifier="sErrorHeaderParsing" Type="string" Expression="'Parsing error header'"/>
+    <Constant Identifier="sErrorHeaderParsingInvalidTrace" Type="string" Expression="'Parsing error header - invalid trace'"/>
+    <Constant Identifier="sErrorInvalidTraceData" Type="string" Expression="'Invalid trace data: %d'"/>
+    <Constant Identifier="sErrorUnexpectedHeader" Type="string" Expression="'Unexpected header'"/>
+    <Constant Identifier="sErrorUnsupportedHeader" Type="string" Expression="'Unsupported header'"/>
+    <Constant Identifier="sErrorInvalidChannel" Type="string" Expression="'Invalid channel'"/>
+    <Constant Identifier="sErrorInvalidTrace" Type="string" Expression="'Invalid trace'"/>
+    <Constant Identifier="sErrorInvalidHardwareTrace" Type="string" Expression="'Invalid hardware trace'"/>
+    <Constant Identifier="sErrorInvalidTriggerMode" Type="string" Expression="'Invalid TriggerMode'"/>
+    <Constant Identifier="sErrorInvalidAvgTime" Type="string" Expression="'Invalid AvgTime'"/>
+    <Constant Identifier="sErrorInvalidMemSize" Type="string" Expression="'Invalid MemSize'"/>
+    <Constant Identifier="sErrorUnsupportedMemSize" Type="string" Expression="'Unsupported MemSize'"/>
+    <Constant Identifier="sErrorTraceWithoutChannel" Type="string" Expression="'Trace doesn''t have a channel'"/>
+    <Constant Identifier="c0" Type="AnsiChar" Expression="'0'"/>
+    <Constant Identifier="ordC0" Type="UInt32" Expression="CharOrd(c0)"/>
+    <Constant Identifier="cVGran" Type="Extended" Expression="1/25"/>
+    <Constant Identifier="cVMathGran" Type="Extended" Expression="1/50"/>
+    <Constant Identifier="cHGran" Type="Extended" Expression="14/2"/>
+  </Constants>
+
+  <Procedures>
+    <Constructor Identifier="TSiglentSAG1021Base.Create">
+      <!--<Parameters>
+        <Parameter Identifier="Message" Type="IMessage"/>
+      </Parameters>-->
+      <Block>
+        <!--<Execute Statement="Self.Message:= Message" />-->
+      </Block>
+    </Constructor>
+
+    <Procedure Identifier="TSiglentSAG1021Base.BeginUpdate">
+      <Block>
+        <Execute Statement="_UpdateCnt:= _UpdateCnt + 1" />
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TSiglentSAG1021Base.EndUpdate">
+      <Block>
+        <Execute Statement="_UpdateCnt:= _UpdateCnt - 1" />
+        <Block Condition="_UpdateCnt = 0">
+
+        </Block>
+      </Block>
+    </Procedure>
+
+    <!--<Property Identifier="TSquareWave.Freq" Type="">
+      <Setter>
+        
+      </Setter>
+    </Property>-->
+
+    <Property Identifier="TSiglentSDS1104X.CommHeader" Type="THeaderType" >
+      <Getter>
+        <Variable Identifier="ValueS" Type="string" Init="QueryString('CHDR?')"/>
+        <Choose>
+          <When Expression="ValueS = 'OFF'">
+            <Execute Statement="Result:= THeaderType.Off"/>
+          </When>
+          <When Expression="ValueS = 'CHDR SHORT'">
+            <Execute Statement="Result:= THeaderType.Short"/>
+          </When>
+          <When Expression="ValueS = 'CHDR LONG'">
+            <Execute Statement="Result:= THeaderType.Long"/>
+          </When>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorUnexpectedHeader)"/>
+          </Otherwise>
+        </Choose>
+      </Getter>
+      <Setter>
+        <Case Expression="Value">
+          <On Select="THeaderType.Off">
+            <Execute Statement="WriteString('CHDR OFF')"/>
+          </On>
+          <On Select="THeaderType.Short">
+            <Execute Statement="WriteString('CHDR SHORT')"/>
+          </On>
+          <On Select="THeaderType.Long">
+            <Execute Statement="WriteString('CHDR LONG')"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorUnsupportedHeader)"/>
+          </Otherwise>
+        </Case>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.ChannelID" Type="string" >
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TChannelType"/>
+      </Parameters>
+      <Getter>
+        <Case Expression="Channel">
+          <On Select="TChannelType.CH1..TChannelType.CH4">
+            <Execute Statement="Result:= Format('C%d', Channel - TChannelType.CH1 + 1)"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidChannel)"/>
+          </Otherwise>
+        </Case>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.TraceID" Type="string" >
+      <Parameters>
+        <Parameter Identifier="Trace" Type="TTraceType"/>
+      </Parameters>
+      <Getter>
+        <Case Expression="Trace">
+          <On Select="TTraceType.CH1..TTraceType.CH4">
+            <Execute Statement="Result:= Format('C%d', Trace - TTraceType.CH1 + 1)"/>
+          </On>
+          <On Select="TTraceType.Math">
+            <Execute Statement="Result:= 'MATH'"/>
+          </On>
+          <On Select="TTraceType.D0..TTraceType.D15">
+            <Execute Statement="Result:= Format('D%d', Trace - TTraceType.D0)"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidTrace)"/>
+          </Otherwise>
+        </Case>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.TriggerName" Type="string" >
+      <Parameters>
+        <Parameter Identifier="TriggerMode" Type="TTriggerMode"/>
+      </Parameters>
+      <Getter>
+        <Case Expression="TriggerMode" Optimalisation="integermapping">
+          <On Select="TTriggerMode.Auto">
+            <Execute Statement="Result:= 'AUTO'"/>
+          </On>
+          <On Select="TTriggerMode.Normal">
+            <Execute Statement="Result:= 'NORM'"/>
+          </On>
+          <On Select="TTriggerMode.Single">
+            <Execute Statement="Result:= 'SINGLE'"/>
+          </On>
+          <On Select="TTriggerMode.Stop">
+            <Execute Statement="Result:= 'STOP'"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidTriggerMode)"/>
+          </Otherwise>
+        </Case>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.HWTraceID" Type="string" >
+      <Parameters>
+        <Parameter Identifier="Trace" Type="THWTraceType"/>
+      </Parameters>
+      <Getter>
+        <Case Expression="Trace" Optimalisation="integermapping">
+          <On Select="THWTraceType.CH1..THWTraceType.CH4">
+            <Execute Statement="Result:= Format('C%d', Trace - THWTraceType.CH1 + 1)"/>
+          </On>
+          <On Select="THWTraceType.TA">
+            <Execute Statement="Result:= 'TA'"/>
+          </On>
+          <On Select="THWTraceType.TB">
+            <Execute Statement="Result:= 'TB'"/>
+          </On>
+          <On Select="THWTraceType.TC">
+            <Execute Statement="Result:= 'TC'"/>
+          </On>
+          <On Select="THWTraceType.TD">
+            <Execute Statement="Result:= 'TD'"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidHardwareTrace)"/>
+          </Otherwise>
+        </Case>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.AvgTime" Type="string" >
+      <Parameters>
+        <Parameter Identifier="Time" Type="TAvgTime"/>
+      </Parameters>
+      <Getter>
+        <Case Expression="Time" Optimalisation="integermapping">
+          <On Select="TAvgTime.avg4">
+            <Execute Statement="Result:= '4'"/>
+          </On>
+          <On Select="TAvgTime.avg16">
+            <Execute Statement="Result:= '16'"/>
+          </On>
+          <On Select="TAvgTime.avg32">
+            <Execute Statement="Result:= '32'"/>
+          </On>
+          <On Select="TAvgTime.avg64">
+            <Execute Statement="Result:= '64'"/>
+          </On>
+          <On Select="TAvgTime.avg128">
+            <Execute Statement="Result:= '128'"/>
+          </On>
+          <On Select="TAvgTime.avg256">
+            <Execute Statement="Result:= '256'"/>
+          </On>
+          <On Select="TAvgTime.avg512">
+            <Execute Statement="Result:= '512'"/>
+          </On>
+          <On Select="TAvgTime.avg1024">
+            <Execute Statement="Result:= '1024'"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidAvgTime)"/>
+          </Otherwise>
+        </Case>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.TDiv" Type="Extended" >
+      <Getter>
+        <Variable Identifier="ValueS" Type="string" Init="QueryString('TIME_DIV?')"/>
+        <Execute Statement="Result:= CodeToFloat(ValueS)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString('TIME_DIV ' + FloatToCode(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.MemorySize" Type="TMemSize" >
+      <Getter>
+        <Variable Identifier="ValueS" Type="string" Init="QueryString('MEMORY_SIZE?')"/>
+        <Choose>
+          <When Expression="ValueS = '7K'">
+            <Execute Statement="Result:= TMemSize.ms7K"/>
+          </When>
+          <When Expression="ValueS = '14K'">
+            <Execute Statement="Result:= TMemSize.ms14K"/>
+          </When>
+          <When Expression="ValueS = '70K'">
+            <Execute Statement="Result:= TMemSize.ms70K"/>
+          </When>
+          <When Expression="ValueS = '140K'">
+            <Execute Statement="Result:= TMemSize.ms140K"/>
+          </When>
+          <When Expression="ValueS = '700K'">
+            <Execute Statement="Result:= TMemSize.ms700K"/>
+          </When>
+          <When Expression="ValueS = '1.4M'">
+            <Execute Statement="Result:= TMemSize.ms1M4"/>
+          </When>
+          <When Expression="ValueS = '7M'">
+            <Execute Statement="Result:= TMemSize.ms7M"/>
+          </When>
+          <When Expression="ValueS = '14M'">
+            <Execute Statement="Result:= TMemSize.ms14M"/>
+          </When>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidMemSize)"/>
+          </Otherwise>
+        </Choose>
+      </Getter>
+      <Setter>
+        <Variable Identifier="ValueS" Type="string"/>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TMemSize.ms7K">
+            <Execute Statement="ValueS:= '7K'"/>
+          </On>
+          <On Select="TMemSize.ms14K">
+            <Execute Statement="ValueS:= '14K'"/>
+          </On>
+          <On Select="TMemSize.ms70K">
+            <Execute Statement="ValueS:= '70K'"/>
+          </On>
+          <On Select="TMemSize.ms140K">
+            <Execute Statement="ValueS:= '140K'"/>
+          </On>
+          <On Select="TMemSize.ms1M4">
+            <Execute Statement="ValueS:= '1.4M'"/>
+          </On>
+          <On Select="TMemSize.ms7M">
+            <Execute Statement="ValueS:= '7M'"/>
+          </On>
+          <On Select="TMemSize.ms14M">
+            <Execute Statement="ValueS:= '14M'"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorUnsupportedMemSize)"/>
+          </Otherwise>
+        </Case>
+        <Execute Statement="WriteString('MEMORY_SIZE ' + ValueS)"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.SampleRate" Type="Extended" >
+      <Getter>
+        <Variable Identifier="ValueS" Type="string" Init="QueryString('SARA?')"/>
+        <Execute Statement="Result:= CodeToFloat(ValueS)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString('SARA ' + FloatToCode(Value))"/>
+      </Setter>
+    </Property>
+
+    <Procedure Identifier="TSiglentSDS1104X.SetTrigger">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TChannelType"/>
+        <Parameter Identifier="Value" Type="Extended"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="WriteString(ChannelID[Channel] + ':TRIG_LEVEL ' + FloatToCode(Value))"/>
+      </Block>
+    </Procedure>
+
+    <Property Identifier="TSiglentSDS1104X.TriggerLevel" Type="Extended" >
+      <Getter>
+        <Variable Identifier="ValueS" Type="string" Init="QueryString('TRIG_LEVEL?')"/>
+        <Execute Statement="Result:= CodeToFloat(ValueS)"/>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.VDiv" Type="Extended" >
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TChannelType"/>
+      </Parameters>
+      <Getter>
+        <Variable Identifier="ValueS" Type="string" Init="QueryString(ChannelID[Channel] + ':VOLT_DIV?')"/>
+        <Execute Statement="Result:= CodeToFloat(ValueS)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(ChannelID[Channel] + ':VOLT_DIV ' + FloatToCode(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.Enabled" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="HWTraceType" Type="THWTraceType"/>
+      </Parameters>
+      <Getter>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString(Format('%s:TRA?', HWTraceID[HWTraceType]), retCount))"/>
+        <Execute Statement="Result:= ReadOnOff"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteOnOff(Format('%s:TRA', HWTraceID[HWTraceType]), Value)"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.HistoryMode" Type="Boolean">
+      <Getter>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString('HISTORY_MODE', retCount))"/>
+        <Execute Statement="Result:= ReadOnOff"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteOnOff('HISTORY_MODE', Value)"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.SequenceMode" Type="Boolean">
+      <Getter>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString('ACquire_SeQuence_Mode', retCount))"/>
+        <Execute Statement="Result:= ReadOnOff"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteOnOff('ACquire_SeQuence_Mode', Value)"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.MathVDiv" Type="Extended" >
+      <Getter>
+        <Variable Identifier="ValueS" Type="string" Init="QueryString('MATH_VERT_DIV?')"/>
+        <Execute Statement="Result:= CodeToFloat(ValueS)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString('MATH_VERT_DIV ' + FloatToCode(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.MathVPosition" Type="Extended" >
+      <Getter>
+        <Variable Identifier="ValueS" Type="string" Init="QueryString('MATH_VERT_POS?')"/>
+        <Execute Statement="Result:= CodeToFloat(ValueS)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString('MATH_VERT_POS ' + FloatToCode(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.TriggerDelay" Type="Extended" >
+      <Getter>
+        <Variable Identifier="ValueS" Type="string" Init="QueryString('TRIG_DELAY?')"/>
+        <Execute Statement="Result:= CodeToFloat(ValueS)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString('TRIG_DELAY ' + FloatToCode(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.VOffset" Type="Extended" >
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TChannelType"/>
+      </Parameters>
+      <Getter>
+        <Variable Identifier="ValueS" Type="string" Init="QueryString(ChannelID[Channel] + ':OFFSET?')"/>
+        <Execute Statement="Result:= CodeToFloat(ValueS)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(ChannelID[Channel] + ':OFFSET ' + FloatToCode(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.ActiveFrame" Type="UInt32" >
+      <Getter>
+        <Execute Statement="WriteString('FRAME_SET?')"/>
+        <Execute Statement="Result:= ReadInt64"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteInt64('FRAME_SET', Value)"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.SegmentCount" Type="UInt32" >
+      <Getter>
+        <Execute Statement="WriteString('ACquire_SeQuence_Seg?')"/>
+        <Execute Statement="Result:= ReadInt64"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteInt64('ACquire_SeQuence_Seg', Value)"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.TriggerMode" Type="TTriggerMode" >
+      <!--<Getter>
+        <Variable Identifier="ValueS" Type="string" Init="QueryString(ChannelID[Channel] + ':OFFSET?')"/>
+        <Execute Statement="Result:= CodeToFloat(ValueS)"/>
+      </Getter>-->
+      <Setter>
+        <Execute Statement="WriteString('TRIG_MODE ' + TriggerName[Value])"/>
+      </Setter>
+    </Property>
+
+    <Function Identifier="TSiglentSDS1104X.ScreenCapure" Type="Pointer">
+      <Block>
+        <Execute Statement="WriteString('SCDP')"/>
+        <Execute Statement="OleCheck(Message.Read(1000000, Result))"/>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TSiglentSDS1104X.ScreenCapureToFile">
+      <Parameters>
+        <Parameter Identifier="Filename" Type="string"/>
+        <Parameter Identifier="ImageType" Type="TImageType"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="BMPData" Init="ScreenCapure"/>
+        <TryFinally>
+          <Try>
+            <Object.Use Identifier="SafeArrayStream" Type="TSafeArrayStream" Expression="TSafeArrayStream.Create">
+              <Raise Condition="not SafeArrayStream.SetSafeArray(BMPData)" Expression="Exception.Create(sErrorGettingScreenCapture)"/>
+              <Case Expression="ImageType">
+                <On Select="TImageType.BMP">
+                  <Execute Statement="SafeArrayStream.SaveToFile(Filename)"/>
+                </On>
+                <On Select="TImageType.PNG">
+                  <Object.Use Identifier="BMPObj" Type="TBitmap" Expression="TBitmap.Create">
+                    <Execute Statement="BMPObj.LoadFromStream(SafeArrayStream)"/>
+                    <Object.Use Identifier="PNGObj" Type="TPngImage" Expression="TPngImage.Create">
+                      <Execute Statement="PNGObj.Assign(BMPObj)"/>
+                      <Execute Statement="PNGObj.SaveToFile(Filename)"/>
+                    </Object.Use>
+                  </Object.Use>
+                </On>
+              </Case>
+            </Object.Use>
+          </Try>
+          <Finally>
+            <Execute Statement="OleCheck(SafeArrayDestroy(BMPData))"/>
+          </Finally>
+        </TryFinally>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TSiglentSDS1104X.SaveWaveToFile">
+      <Parameters>
+        <Parameter Identifier="Filename" Type="string"/>
+        <Parameter Identifier="Wave" Type="string"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="WaveData"/>
+        <Execute Statement="WriteString('WVDT? ' + Wave)"/>
+        <Execute Statement="OleCheck(Message.Read(1000000, WaveData))"/>
+        <TryFinally>
+          <Try>
+            <Object.Use Identifier="SafeArrayStream" Type="TSafeArrayStream" Expression="TSafeArrayStream.Create">
+              <Raise Condition="not SafeArrayStream.SetSafeArray(WaveData)" Expression="Exception.Create(sErrorGettingAWGWaveData)"/>
+              <Execute Statement="SafeArrayStream.SaveToFile(Filename)"/>
+            </Object.Use>
+          </Try>
+          <Finally>
+            <Execute Statement="OleCheck(SafeArrayDestroy(WaveData))"/>
+          </Finally>
+        </TryFinally>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="TSiglentSDS1104X.WaveForm" Type="Pointer">
+      <Parameters>
+        <Parameter Identifier="Trace" Type="TTraceType"/>
+      </Parameters>
+      <Block>
+        <!--<Execute Statement="WriteString(TraceID + ':WF? ALL')"/>-->
+        <Execute Statement="WriteString(TraceID[Trace] + ':WF? DAT2')"/>
+        <!--<Execute Statement="WriteString(TraceID[Trace] + ':WF? ALL')"/>-->
+        <Execute Statement="OleCheck(Message.Set_Timeout(10000))"/>
+        <Execute Statement="OleCheck(Message.Read(100000000, Result))"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TSiglentSDS1104X.WaveForm" Type="Pointer">
+      <Parameters>
+        <Parameter Identifier="Trace" Type="TTraceType"/>
+        <Parameter Identifier="Segment" Type="Integer"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="SegmentsParam" Type="string" Init="''"/>
+        <Execute Statement="SegmentsParam:= Format('SN,%d', Segment)" Condition="Segment &gt; 0"/>
+        <Variable Identifier="CountParam" Type="string" Init="''"/>
+        <Execute Statement="CountParam:= Format('NP,%d', 1000)"/>
+        <Variable Identifier="WaveSetupParameters" Type="string" Init="ConcatExt(',', True, CountParam, SegmentsParam)"/>
+        <!--<Execute Statement="WriteString('WFSU ' + WaveSetupParameters)" Condition="IsNonEmptyString(WaveSetupParameters)"/>-->
+        <Execute Statement="WriteString('WFSU SP,0,NP,100')"/>
+        <Execute Statement="WriteString(TraceID[Trace] + ':WF? DAT2')"/>
+        <Execute Statement="OleCheck(Message.Set_Timeout(10000))"/>
+        <Execute Statement="OleCheck(Message.Read(100000000, Result))"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TraceChannel" Type="TChannelType" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Trace" Type="TTraceType"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Trace" Optimalisation="integermapping">
+          <On Select="TTraceType.CH1">
+            <Execute Statement="Result:= TChannelType.CH1"/>
+          </On>
+          <On Select="TTraceType.CH2">
+            <Execute Statement="Result:= TChannelType.CH2"/>
+          </On>
+          <On Select="TTraceType.CH3">
+            <Execute Statement="Result:= TChannelType.CH3"/>
+          </On>
+          <On Select="TTraceType.CH4">
+            <Execute Statement="Result:= TChannelType.CH4"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorTraceWithoutChannel)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TSiglentSDS1104X.WaveCapureToFile">
+      <Parameters>
+        <Parameter Identifier="Trace" Type="TTraceType"/>
+        <Parameter Identifier="Filename" Type="string"/>
+      </Parameters>
+      <Variables>
+        <Variable Identifier="XmlDoc" Type="IXMLDomDocument"/>
+        <Variable Identifier="RootE" Type="IXMLDomElement"/>
+        <Variable Identifier="DataE" Type="IXMLDomElement"/>
+        <Variable Identifier="PointE" Type="IXMLDomElement"/>
+        <Variable Identifier="VFactor" Type="Extended"/>
+        <Variable Identifier="VOffset" Type="Extended"/>
+        <Variable Identifier="WaveLengthCount" Type="Int64" Init="-1"/>
+        <Variable Identifier="WaveLength" Type="UInt64" Init="0"/>
+        <Variable Identifier="RawElement" Type="Int32"/>
+        <Variable Identifier="AnsiData" Type="AnsiChar"/>
+        <Variable Identifier="TraceS" Type="AnsiString"/>
+        <Variable Identifier="Value" Type="Extended"/>
+        <Variable Identifier="Time" Type="Extended"/>
+        <Variable Identifier="TimePerSample" Type="Extended"/>
+      </Variables>
+      <Block>
+        <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
+        <Variable Identifier="RawDataArray" Init="WaveForm(Trace)"/>
+        <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
+        <TryFinally>
+          <Try>
+            <Object.Use Identifier="RawData" Type="TSafeArrayStream" Expression="TSafeArrayStream.Create">
+              <Raise Condition="not RawData.SetSafeArray(RawDataArray)" Expression="Exception.Create(sErrorGettingWaveData)"/>
+              <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', RawData.Size, (EndTime-StartTime)/QueryPerformanceFrequency, RawData.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Condition="IsVerbose"/>
+              <msx:Document.Create Identifier="XmlDoc"/>
+              <msx:Document.CreateElement Document="XmlDoc" Element="RootE" Name="WaveForm" ParentElement="XmlDoc"/>
+              <msx:Element.SetAttribute Element="RootE" Name="xmlns:xsi" Value="'http://www.w3.org/2001/XMLSchema-instance'"/>
+              <msx:Element.SetAttribute Element="RootE" Name="xsi:noNamespaceSchemaLocation" Namespace="http://www.w3.org/2001/XMLSchema-instance" Value="'WaveForm.xsd'"/>
+              <msx:Document.CreateElement Document="XmlDoc" Element="DataE" Name="Data" ParentElement="RootE"/>
+              <rep:Reporter.Information Text="Format('RawData.Size: %d', RawData.Size)" Condition="IsVerbose"/>
+              <stm:StateHandler InitialState="SearchDash">
+                <ForLoop Indexer="I" From="0" To="RawData.Size - 1">
+                  <stm:HandleStates>
+                    <stm:State Name="Start">
+                      <Raise Condition="RawData.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                        <On Select="'A'..'Z'">
+                          <Execute Statement="TraceS:= AnsiData"/>
+                          <stm:SetState Name="InTrace" />
+                        </On>
+                        <Otherwise>
+                          <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
+                        </Otherwise>
+                      </Case>
+                    </stm:State>
+                    <stm:State Name="InTrace">
+                      <Raise Condition="RawData.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                        <On Select="'A'..'Z', '0'..'9'">
+                          <Execute Statement="TraceS:= TraceS + AnsiData"/>
+                        </On>
+                        <On Select="':'">
+                          <!--<rep:Reporter.Information Text="Format('Trace: %s', TraceS)" Condition="IsVerbose"/>-->
+                          <stm:SetState Name="SearchDash" />
+                        </On>
+                        <Otherwise>
+                          <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
+                        </Otherwise>
+                      </Case>
+                    </stm:State>
+                    <stm:State Name="SearchDash">
+                      <Raise Condition="RawData.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                        <On Select="'#'">
+                          <stm:SetState Name="SearchNine" />
+                        </On>
+                      </Case>
+                    </stm:State>
+                    <stm:State Name="SearchNine">
+                      <Raise Condition="RawData.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                        <On Select="'9'">
+                          <stm:SetState Name="InWaveLengthCounter" />
+                          <Execute Statement="WaveLengthCount:= 0"/>
+                          <Execute Statement="WaveLength:= 0"/>
+                        </On>
+                      </Case>
+                    </stm:State>
+                    <stm:State Name="InWaveLengthCounter">
+                      <Raise Condition="RawData.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingWaveLength)"/>
+                      <Execute Statement="WaveLengthCount:= WaveLengthCount + 1"/>
+                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                        <On Select="'0'..'9'">
+                          <Execute Statement="WaveLength:= WaveLength * 10 + (CharOrd(AnsiData) - ordC0)"/>
+                        </On>
+                        <Otherwise>
+                          <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
+                        </Otherwise>
+                      </Case>
+                      <Block Condition="WaveLengthCount = 9">
+                        <Case Expression="Trace">
+                          <On Select="TTraceType.CH1..TTraceType.CH4">
+                            <stm:SetState Name="WaveData"/>
+                            <Variable Identifier="Channel" Type="TChannelType" Init="TraceChannel(Trace)"/>
+                            <Execute Statement="VFactor:= VDiv[Channel] * cVGran"/>
+                            <Execute Statement="VOffset:= -Self.VOffset[Channel]"/>
+                          </On>
+                          <On Select="TTraceType.Math">
+                            <stm:SetState Name="WaveData"/>
+                            <Execute Statement="VFactor:= MathVDiv * cVGran" />
+                            <Execute Statement="VOffset:= -MathVPosition * MathVDiv * cVMathGran" />
+                          </On>
+                          <On Select="TTraceType.D0..TTraceType.D15">
+                            <stm:SetState Name="WaveData"/>
+                            <Execute Statement="VFactor:= 1" />
+                            <Execute Statement="VOffset:= 0" />
+                          </On>
+                          <Otherwise>
+                            <Raise Expression="Exception.Create(sErrorHeaderParsingInvalidTrace)"/>
+                          </Otherwise>
+                        </Case>
+                        <Execute Statement="Time:= - TDiv * cHGran"/>
+                        <Execute Statement="TimePerSample:= 1 / SampleRate"/>
+                        <!--<rep:Reporter.Information Text="Format('Points: %d', WaveLength)" Condition="IsVerbose"/>
+                        <rep:Reporter.Information Text="Format('Position: %d', RawData.Position)" Condition="IsVerbose"/>-->
+                      </Block>
+                    </stm:State>
+                    <stm:State Name="WaveData">
+                      <Raise Condition="RawData.ReadDataInt8(RawElement) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingWaveData)"/>
+                      <!--<rep:Reporter.Information Text="Format('%d', RawElement)" Condition="IsVerbose"/>-->
+                      <Execute Statement="Value:= RawElement * VFactor + VOffset"/>
+                      <msx:Document.CreateElement Document="XmlDoc" Element="PointE" Name="P" ParentElement="DataE"/>
+                      <msx:Element.SetAttribute Element="PointE" Name="X" Value="FloatTocode(Time)"/>
+                      <msx:Element.SetAttribute Element="PointE" Name="Y" Value="FloatTocode(Value)"/>
+                      <Execute Statement="Time:= Time + TimePerSample"/>
+                      <Execute Statement="WaveLength:= WaveLength - 1"/>
+                      <stm:SetState Name="Done" Condition="WaveLength = 0"/>
+                    </stm:State>
+                    <stm:State Name="Done">
+                    </stm:State>
+                  </stm:HandleStates>
+                </ForLoop>
+              </stm:StateHandler>
+            </Object.Use>
+            <Raise Expression="Exception.Create(Format(sErrorInvalidTraceData, WaveLength))" Condition="WaveLength &lt;&gt; 0"/>
+            <Variable Identifier="WriteStream" Type="TSequentialFileWriteStream" Init="TSequentialFileWriteStream.Create(Filename)"/>
+            <Variable Identifier="Stream" Type="IStream" Init="WriteStream as IStream"/>
+            <Variable Identifier="MXWriter" Type="IMXWriter" Init="CoMXXMLWriter60.Create"/>
+            <Execute Statement="MXWriter.Output:= Stream"/>
+            <Execute Statement="MXWriter.Indent:= True"/>
+            <Execute Statement="MXWriter.encoding:= 'utf-8'"/>
+            <Variable Identifier="Output" Type="Variant" Init="MXWriter"/>
+            <Variable Identifier="XMLReader" Type="ISAXXMLReader" Init="CoSAXXMLReader60.Create"/>
+            <Execute Statement="XMLReader.putContentHandler(MXWriter as ISAXContentHandler)"/>
+            <Execute Statement="XMLReader.Parse(XmlDoc)"/>
+          </Try>
+          <Finally>
+            <Execute Statement="OleCheck(SafeArrayDestroy(RawDataArray))"/>
+          </Finally>
+        </TryFinally>
+      </Block>
+    </Procedure>
+    
+    <Procedure Identifier="TSiglentSDS1104X.ReleaseSummedFrameSamples">
+      <Parameters>
+        <Parameter Identifier="Samples" Type="TRawSampleCollection"/>
+      </Parameters>
+      <Block>
+        <Free Expression="Samples.SamplePointManager"/>
+        <Free Expression="Samples"/>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="TSiglentSDS1104X.GetSummedFrameSamples" Type="TRawSampleCollection">
+      <Parameters>
+        <Parameter Identifier="Trace" Type="TTraceType"/>
+        <Parameter Identifier="FrameHighIndex" Type="Int64"/>
+        <Parameter Identifier="Options" Type="TSummedFrameSamplesOptions"/>
+      </Parameters>
+      <Variables>
+        <Variable Identifier="XmlDoc" Type="IXMLDomDocument"/>
+        <Variable Identifier="RootE" Type="IXMLDomElement"/>
+        <Variable Identifier="DataE" Type="IXMLDomElement"/>
+        <Variable Identifier="PointE" Type="IXMLDomElement"/>
+        <Variable Identifier="WaveLength" Type="UInt64"/>
+        <Variable Identifier="RawElement" Type="Int32"/>
+        <Variable Identifier="AnsiData" Type="AnsiChar"/>
+        <Variable Identifier="TraceS" Type="AnsiString"/>
+        <Variable Identifier="SamplePointManager" Type="TSamplePointManager"/>
+        <Variable Identifier="LimitSamples" Type="UInt32" Init="0"/>
+        <Variable Identifier="LimitSamplesLeft" Type="UInt32"/>
+        <Variable Identifier="DoLimitSamples" Type="Boolean" Init="False"/>
+      </Variables>
+      <Block>
+        <Execute Statement="Result:= TRawSampleCollection.Create"/>
+        <Execute Statement="SamplePointManager:= TSamplePointManager.Create"/>
+        <Execute Statement="Result.SamplePointManager:= SamplePointManager"/>
+        <Block Condition="Assigned(Options)">
+          <Execute Statement="LimitSamples:= Options.LimitSamples"/>
+          <Execute Statement="DoLimitSamples:= LimitSamples &gt; 0"/>
+        </Block>
+        <Object.Use Identifier="RawData" Type="TSafeArrayStream" Expression="TSafeArrayStream.Create">
+          <stm:StateHandler InitialState="CreateDataPoint" Name="DataHandler">
+            <ForLoop Indexer="ActiveFrameIndex" From="1" To="FrameHighIndex">
+              <TryFinally>
+                <Try>
+                  <Execute Statement="ActiveFrame:= ActiveFrameIndex"/>
+                  <Execute Statement="LimitSamplesLeft:= LimitSamples"/>
+                  <rep:Reporter.Information Text="Format('ActiveFrame: %d', ActiveFrame)" Condition="IsVerbose"/>
+                  <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
+                  <Variable Identifier="RawDataArray" Init="WaveForm(Trace, ActiveFrameIndex)"/>
+                  <ExitOnAbortRequest/>
+                  <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
+                  <Variable Identifier="ActiveDataPoint" Type="TSamplePoint"/>
+                  <Variable Identifier="WaveLengthCount" Type="Int64" Init="-1"/>
+
+                  <Raise Condition="not RawData.SetSafeArray(RawDataArray)" Expression="Exception.Create(sErrorGettingWaveData)"/>
+                  <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', RawData.Size, (EndTime-StartTime)/QueryPerformanceFrequency, RawData.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Condition="IsVerbose"/>
+
+                  <stm:StateHandler InitialState="SearchDash">
+                    <ForLoop Indexer="I" From="0" To="RawData.Size - 1">
+                      <stm:HandleStates>
+                        <stm:State Name="Start">
+                          <Raise Condition="RawData.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                          <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                            <On Select="'A'..'Z'">
+                              <Execute Statement="TraceS:= AnsiData"/>
+                              <stm:SetState Name="InTrace" />
+                            </On>
+                            <Otherwise>
+                              <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
+                            </Otherwise>
+                          </Case>
+                        </stm:State>
+                        <stm:State Name="InTrace">
+                          <Raise Condition="RawData.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                          <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                            <On Select="'A'..'Z', '0'..'9'">
+                              <Execute Statement="TraceS:= TraceS + AnsiData"/>
+                            </On>
+                            <On Select="':'">
+                              <rep:Reporter.Information Text="Format('Trace: %s', TraceS)" Condition="IsVerbose"/>
+                              <stm:SetState Name="SearchDash" />
+                            </On>
+                            <Otherwise>
+                              <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
+                            </Otherwise>
+                          </Case>
+                        </stm:State>
+                        <stm:State Name="SearchDash">
+                          <!--<rep:Reporter.Information Text="'SearchDash'" Condition="IsDebugging"/>-->
+                          <Raise Condition="RawData.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                          <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                            <On Select="'#'">
+                              <stm:SetState Name="SearchNine" />
+                            </On>
+                          </Case>
+                        </stm:State>
+                        <stm:State Name="SearchNine">
+                          <!--<rep:Reporter.Information Text="'SearchNine'" Condition="IsDebugging"/>-->
+                          <Raise Condition="RawData.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                          <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                            <On Select="'9'">
+                              <stm:SetState Name="InWaveLengthCounter" />
+                              <Execute Statement="WaveLengthCount:= 0"/>
+                              <Execute Statement="WaveLength:= 0"/>
+                            </On>
+                          </Case>
+                        </stm:State>
+                        <stm:State Name="InWaveLengthCounter">
+                          <Raise Condition="RawData.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingWaveLength)"/>
+                          <Execute Statement="WaveLengthCount:= WaveLengthCount + 1"/>
+                          <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                            <On Select="'0'..'9'">
+                              <Execute Statement="WaveLength:= WaveLength * 10 + (CharOrd(AnsiData) - ordC0)"/>
+                            </On>
+                            <Otherwise>
+                              <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
+                            </Otherwise>
+                          </Case>
+                          <Block Condition="WaveLengthCount = 9">
+                            <Case Expression="Trace">
+                              <On Select="TTraceType.CH1..TTraceType.CH4">
+                                <Variable Identifier="Channel" Type="TChannelType" Init="TraceChannel(Trace)"/>
+                                <Execute Statement="Result.VFactor:= VDiv[Channel] * cVGran"/>
+                                <Execute Statement="Result.VOffset:= -Self.VOffset[Channel]"/>
+                              </On>
+                              <On Select="TTraceType.Math">
+                                <Execute Statement="Result.VFactor:= MathVDiv * cVGran" />
+                                <Execute Statement="Result.VOffset:= -MathVPosition * MathVDiv * cVMathGran" />
+                              </On>
+                              <On Select="TTraceType.D0..TTraceType.D15">
+                                <Execute Statement="Result.VFactor:= 1" />
+                                <Execute Statement="Result.VOffset:= 0" />
+                              </On>
+                              <Otherwise>
+                                <Raise Expression="Exception.Create(sErrorHeaderParsingInvalidTrace)"/>
+                              </Otherwise>
+                            </Case>
+                            <stm:SetState Name="WaveData"/>
+                            <Execute Statement="Result.Time:= - TDiv * cHGran"/>
+                            <Execute Statement="Result.TimePerSample:= 1 / SampleRate"/>
+                            <Block Condition="DoLimitSamples">
+                              <Execute Statement="WaveLength:= LimitSamples" Condition="LimitSamples &lt; WaveLength"/>
+                            </Block>
+                            <!--<rep:Reporter.Information Text="Format('Points: %d', WaveLength)" Condition="IsVerbose"/>
+                            <rep:Reporter.Information Text="Format('Position: %d', RawData.Position)" Condition="IsVerbose"/>-->
+                          </Block>
+                        </stm:State>
+                        <stm:State Name="WaveData">
+                          <Raise Condition="RawData.ReadDataInt8(RawElement) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingWaveData)"/>
+                          <!--<rep:Reporter.Information Text="Format('RawElement: %d', RawElement)" Condition="IsVerbose"/>-->
+                          <stm:HandleStates Handler="DataHandler">
+                            <stm:State Name="CreateDataPoint">
+                              <Execute Statement="ActiveDataPoint:= SamplePointManager.NewPoint"/>
+                              <Execute Statement="ActiveDataPoint.Add(RawElement)"/>
+                            </stm:State>
+                            <stm:State Name="UpdateDataPoints">
+                              <Execute Statement="ActiveDataPoint.Add(RawElement)"/>
+                              <Execute Statement="ActiveDataPoint:= ActiveDataPoint.Next"/>
+                            </stm:State>
+                          </stm:HandleStates>
+                          <Execute Statement="WaveLength:= WaveLength - 1"/>
+                          <stm:SetState Name="Done" Condition="WaveLength = 0"/>
+                        </stm:State>
+                        <stm:State Name="Done">
+                        </stm:State>
+                      </stm:HandleStates>
+                    </ForLoop>
+                  </stm:StateHandler>
+                </Try>
+                <Finally>
+                  <Execute Statement="RawData.Clear"/>
+                  <Execute Statement="OleCheck(SafeArrayDestroy(RawDataArray))" Condition="not IsEmpty(RawDataArray)"/>
+                </Finally>
+              </TryFinally>
+              <stm:SetState Handler="DataHandler" Name="UpdateDataPoints"/>
+              <Execute Statement="ActiveDataPoint:= SamplePointManager.SampleHead"/>
+            </ForLoop>
+          </stm:StateHandler>
+          <Execute Statement="Result.Count:= FrameHighIndex"/>
+        </Object.Use>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TSiglentSDS1104X.Stop">
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString('Stop', retCount))"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TSiglentSDS1104X.Wait">
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString('Wait', retCount))"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TSiglentSDS1104X.Wait">
+      <Parameters>
+        <Parameter Identifier="Time" Type="Extended"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString('Wait ' + FloatToCode(Time), retCount))"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TSiglentSDS1104X.Arm">
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString('Arm', retCount))"/>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="TSiglentSDS1104X.ClearStatusFlags" Type="UInt32">
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString('INR?', retCount))"/>
+        <Execute Statement="Result:= ReadUInt32"/>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TSiglentSDS1104X.SetAverageMode">
+      <Parameters>
+        <Parameter Identifier="Time" Type="TAvgTime"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString(Format('ACQUIRE_WAY AVERAGE,%s', AvgTime[Time]), retCount))"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TSiglentSDS1104X.RawWrite">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString(Value, retCount))"/>
+      </Block>
+    </Procedure>
+
+  </Procedures>
+</pkg:Library>

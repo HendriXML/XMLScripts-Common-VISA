@@ -1,0 +1,210 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<pkg:Library
+  xsi:schemaLocation="urn:schemas-www-wisware.nl-scriptingpackages ../XmlSchemas.Common.XmlScript/XMLScripting.Packages.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:pkg="urn:schemas-www-wisware.nl-scriptingpackages"
+  xmlns:sys="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:ado="urn:schemas-www-wisware.nl-xmlscripting-ado"
+  xmlns:fil="urn:schemas-www-wisware.nl-xmlscripting-filemanagement"
+  xmlns:fwl="urn:schemas-www-wisware.nl-xmlscripting-windowsfirewall"
+  xmlns:inx="urn:schemas-www-wisware.nl-xmlscripting-index"
+  xmlns:lil="urn:schemas-www-wisware.nl-xmlscripting-linkedlist"
+  xmlns:msx="urn:schemas-www-wisware.nl-xmlscripting-xml"
+  xmlns:reg="urn:schemas-www-wisware.nl-xmlscripting-registry"
+  xmlns:rep="urn:schemas-www-wisware.nl-xmlscripting-report"
+  xmlns:sts="urn:schemas-www-wisware.nl-xmlscripting-showstatus"
+  xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
+  >
+  <Type>
+    <DataClass Identifier="TVISAInstrument">
+      <Field Identifier="VisaSession" Type="IVisaSession"/>
+      <Field Identifier="Message" Type="IMessage"/>
+    </DataClass>
+
+    <DataClass Identifier="TRawSample">
+      <Field Identifier="Value" Type="Int32"/>
+      <Field Identifier="Next" Type="TRawSample"/>
+    </DataClass>
+    
+    <DataClass Identifier="TRawSampleCollection">
+      <Field Identifier="SamplePointManager" Type="TSamplePointManager"/>
+      <Field Identifier="Count" Type="UInt32"/>
+      <Field Identifier="Time" Type="Extended"/>
+      <Field Identifier="TimePerSample" Type="Extended"/>
+      <Field Identifier="VFactor" Type="Extended"/>
+      <Field Identifier="VOffset" Type="Extended"/>
+    </DataClass>
+    
+    <DataClass Identifier="TScopeSample">
+      <Field Identifier="Time" Type="Extended"/>
+      <Field Identifier="Value" Type="Extended"/>
+      <Field Identifier="Next" Type="TScopeSample"/>
+    </DataClass>
+
+    <DataClass Identifier="TScopeSampleCollection">
+      <Field Identifier="SampleHead" Type="TScopeSample"/>
+    </DataClass>
+
+  </Type>
+  <Procedures>
+
+    <Function Identifier="CreateVisaSession" Type="IVisaSession">
+      <Parameters>
+        <Parameter Identifier="ResourceName" Type="string"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="ResourceManager" Type="IResourceManager3" Init="CoResourceManager.Create"/>
+        <Execute Statement="OleCheck(ResourceManager.Open(ResourceName, TAccessMode.NO_LOCK, 0, '', Result))"/>
+      </Block>
+    </Function>
+
+    <Constructor Identifier="TVISAInstrument.Create">
+      <Parameters>
+        <Parameter Identifier="VisaSession" Type="IVisaSession"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Self.VisaSession:= VisaSession" />
+        <Execute Statement="Message:= VisaSession as IMessage" />
+        <!--<Variable Identifier="IOProtocol"/>
+        <rep:Reporter.Information Text="'Get protocol'"/>
+        <Execute Statement="OleCheck(Message.Get_IOProtocol(IOProtocol))" />
+        <rep:Reporter.Information Text="Format('%d', IOProtocol)"/>-->
+        <!--<Execute Statement="OleCheck(Message.Set_TerminationCharacter(10))"/>
+        <Execute Statement="OleCheck(Message.Set_TerminationCharacterEnabled(True))"/>-->
+      </Block>
+    </Constructor>
+
+    <Function Identifier="TVISAInstrument.ReadFloat" Type="Extended">
+      <Block>
+        <Variable Identifier="readResult"/>
+        <Execute Statement="OleCheck(Message.ReadString(1000, readResult))"/>
+        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
+        <WhileLoop Expression="Length(readResult) &gt; 0">
+          <Break Condition="CharAt(readResult, Length(readResult)) &lt;&gt; #10"/>
+          <Execute Statement="readResult:= Copy(readResult, 1, Length(readResult) - 1)"/>
+        </WhileLoop>
+        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
+        <Execute Statement="Result:= CodeToFloat(readResult)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TVISAInstrument.ReadUInt32" Type="UInt32">
+      <Block>
+        <Variable Identifier="readResult"/>
+        <Execute Statement="OleCheck(Message.ReadString(1000, readResult))"/>
+        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
+        <WhileLoop Expression="Length(readResult) &gt; 0">
+          <Break Condition="CharAt(readResult, Length(readResult)) &lt;&gt; #10"/>
+          <Execute Statement="readResult:= Copy(readResult, 1, Length(readResult) - 1)"/>
+        </WhileLoop>
+        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
+        <Execute Statement="Result:= StrToInt(readResult)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TVISAInstrument.QueryString">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString(Value, retCount))"/>
+        <Execute Statement="OleCheck(Message.ReadString(1000, Result))"/>
+        <!--<rep:Reporter.Information Text="Result" Condition="IsDebugging"/>-->
+        <WhileLoop Expression="Length(Result) &gt; 0">
+          <Break Condition="CharAt(Result, Length(Result)) &lt;&gt; #10"/>
+          <Execute Statement="Result:= Copy(Result, 1, Length(Result) - 1)"/>
+        </WhileLoop>
+      </Block>
+    </Function>
+
+    <Function Identifier="TVISAInstrument.ReadString" Type="string">
+      <Block>
+        <Execute Statement="OleCheck(Message.ReadString(1000, Result))"/>
+        <!--<rep:Reporter.Information Text="Result" Condition="IsDebugging"/>-->
+        <WhileLoop Expression="Length(Result) &gt; 0">
+          <Break Condition="CharAt(Result, Length(Result)) &lt;&gt; #10"/>
+          <Execute Statement="Result:= Copy(Result, 1, Length(Result) - 1)"/>
+        </WhileLoop>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TVISAInstrument.WriteString">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString(Value, retCount))"/>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="TVISAInstrument.ReadOnOff" Type="Boolean">
+      <Block>
+        <Variable Identifier="readResult"/>
+        <Execute Statement="OleCheck(Message.ReadString(1000, readResult))"/>
+        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
+        <WhileLoop Expression="Length(readResult) &gt; 0">
+          <Break Condition="CharAt(readResult, Length(readResult)) &lt;&gt; #10"/>
+          <Execute Statement="readResult:= Copy(readResult, 1, Length(readResult) - 1)"/>
+        </WhileLoop>
+        <Choose>
+          <When Expression="readResult = 'ON'">
+            <Execute Statement="Result:= True"/>
+          </When>
+          <When Expression="readResult = 'OFF'">
+            <Execute Statement="Result:= False"/>
+          </When>
+          <Otherwise>
+            <Raise Expression="Exception.Create('Invalid on/off value: ' + readResult)"/>
+          </Otherwise>
+        </Choose>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TVISAInstrument.WriteOnOff">
+      <Parameters>
+        <Parameter Identifier="Parameter" Type="string"/>
+        <Parameter Identifier="Value" Type="Boolean"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Variable Identifier="ValueS" Type="string" Init="IfElse(Value, 'ON', 'OFF')"/>
+        <Execute Statement="OleCheck(Message.WriteString(Format('%s %s', Parameter, ValueS), retCount))"/>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="TVISAInstrument.ReadInt64" Type="Int64">
+      <Block>
+        <Variable Identifier="readResult"/>
+        <Execute Statement="OleCheck(Message.ReadString(1000, readResult))"/>
+        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
+        <WhileLoop Expression="Length(readResult) &gt; 0">
+          <Break Condition="CharAt(readResult, Length(readResult)) &lt;&gt; #10"/>
+          <Execute Statement="readResult:= Copy(readResult, 1, Length(readResult) - 1)"/>
+        </WhileLoop>
+        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
+        <Execute Statement="Result:= StrToInt(readResult)"/>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TVISAInstrument.WriteInt64">
+      <Parameters>
+        <Parameter Identifier="Parameter" Type="string"/>
+        <Parameter Identifier="Value" Type="Int64"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Execute Statement="OleCheck(Message.WriteString(Format('%s %d', Parameter, Value), retCount))"/>
+      </Block>
+    </Procedure>
+
+    <Property Identifier="TVISAInstrument.IDN" Type="string" >
+      <Getter>
+        <Execute Statement="Result:= QueryString('*IDN?')"/>
+      </Getter>
+    </Property>
+
+  </Procedures>
+</pkg:Library>

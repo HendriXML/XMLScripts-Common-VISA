@@ -1,0 +1,194 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<pkg:Library
+  xsi:schemaLocation="urn:schemas-www-wisware.nl-scriptingpackages ../XmlSchemas.Common.XmlScript/XMLScripting.Packages.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:pkg="urn:schemas-www-wisware.nl-scriptingpackages"
+  xmlns:sys="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:ado="urn:schemas-www-wisware.nl-xmlscripting-ado"
+  xmlns:fil="urn:schemas-www-wisware.nl-xmlscripting-filemanagement"
+  xmlns:fwl="urn:schemas-www-wisware.nl-xmlscripting-windowsfirewall"
+  xmlns:inx="urn:schemas-www-wisware.nl-xmlscripting-index"
+  xmlns:lil="urn:schemas-www-wisware.nl-xmlscripting-linkedlist"
+  xmlns:msx="urn:schemas-www-wisware.nl-xmlscripting-xml"
+  xmlns:reg="urn:schemas-www-wisware.nl-xmlscripting-registry"
+  xmlns:rep="urn:schemas-www-wisware.nl-xmlscripting-report"
+  xmlns:sts="urn:schemas-www-wisware.nl-xmlscripting-showstatus"
+  xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
+  xmlns:sim="urn:schemas-www-wisware.nl-xmlscripting-simulateuserinput"
+  >
+  <Uses>
+    <Use Identifier="VISAInstrument"/>
+  </Uses>
+  
+  <Type>
+    <Enumeration Identifier="TSPD3303XChannel" Elements="CH1 = 1, CH2 = 2, CH3 = 3" />
+
+    <DataClass Identifier="TSiglentSPD3303X" Inherit="TVISAInstrument">
+
+    </DataClass>
+  </Type>
+  
+  <Procedures>
+    
+    <Procedure Identifier="RaiseInvalidChannel">
+      <Block>
+        <Raise Expression="Exception.Create('Invalid channel')"/>
+      </Block>
+    </Procedure>
+
+    <Property Identifier="TSiglentSPD3303X.Voltage" Type="Extended">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="Int32"/>
+      </Parameters>
+      <Getter>
+        <Variable Identifier="retCount"/>
+        <Case Expression="Channel">
+          <On Select="1, 2">
+            <Execute Statement="OleCheck(Message.WriteString(Format('CH%d:VOLTage?', Channel), retCount))"/>
+            <Execute Statement="Result:= ReadFloat"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="RaiseInvalidChannel"/>
+          </Otherwise>
+        </Case>
+      </Getter>
+      <Setter>
+        <Variable Identifier="retCount"/>
+        <Case Expression="Channel">
+          <On Select="1, 2">
+            <Execute Statement="OleCheck(Message.WriteString(Format('CH%d:VOLTage %s', Channel, FloatToCode(Value)), retCount))"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="RaiseInvalidChannel"/>
+          </Otherwise>
+        </Case>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSPD3303X.Current" Type="Extended">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="Int32"/>
+      </Parameters>
+      <Getter>
+        <Variable Identifier="retCount"/>
+        <Case Expression="Channel">
+          <On Select="1, 2">
+            <Execute Statement="OleCheck(Message.WriteString(Format('CH%d:CURRent?', Channel), retCount))"/>
+            <Execute Statement="Result:= ReadFloat"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="RaiseInvalidChannel"/>
+          </Otherwise>
+        </Case>
+      </Getter>
+      <Setter>
+        <Variable Identifier="retCount"/>
+        <Case Expression="Channel">
+          <On Select="1, 2">
+            <Execute Statement="OleCheck(Message.WriteString(Format('CH%d:CURRent %s', Channel, FloatToCode(Value)), retCount))"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="RaiseInvalidChannel"/>
+          </Otherwise>
+        </Case>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSPD3303X.ActualCurrent" Type="Extended">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="Int32"/>
+      </Parameters>
+      <Getter>
+        <Variable Identifier="retCount"/>
+        <Case Expression="Channel">
+          <On Select="1, 2">
+            <Execute Statement="OleCheck(Message.WriteString(Format('MEASure:CURRent? CH%d', Channel), retCount))"/>
+            <Execute Statement="Result:= ReadFloat"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="RaiseInvalidChannel"/>
+          </Otherwise>
+        </Case>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TSiglentSPD3303X.ActualVoltage" Type="Extended">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="Int32"/>
+      </Parameters>
+      <Getter>
+        <Variable Identifier="retCount"/>
+        <Case Expression="Channel">
+          <On Select="1, 2">
+            <Execute Statement="OleCheck(Message.WriteString(Format('MEASure:VOLTage? CH%d', Channel), retCount))"/>
+            <Execute Statement="Result:= ReadFloat"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="RaiseInvalidChannel"/>
+          </Otherwise>
+        </Case>
+      </Getter>
+    </Property>
+
+    <Function Identifier="TSiglentSPD3303X.WaitForStabilizedVoltage">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="Int32"/>
+        <Parameter Identifier="DiffTime" Type="Integer"/>
+        <Parameter Identifier="Difference" Type="Extended"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="retCount"/>
+        <Variable Identifier="PreWaitVoltage" Type="Extended"/>
+        <Variable Identifier="SPCICommand" Type="string"/>
+        <Case Expression="Channel">
+          <On Select="1, 2">
+            <Execute Statement="SPCICommand:= Format('MEASure:VOLTage? CH%d', Channel)"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="RaiseInvalidChannel"/>
+          </Otherwise>
+        </Case>
+        <RepeatUntilLoop Expression="Abs(PreWaitVoltage - Result) &lt; Difference">
+          <ExitOnAbortRequest/>
+          <Execute Statement="OleCheck(Message.WriteString(SPCICommand, retCount))"/>
+          <Execute Statement="PreWaitVoltage:= ReadFloat"/>
+          <sim:Wait Time="DiffTime"/>
+          <Execute Statement="OleCheck(Message.WriteString(SPCICommand, retCount))"/>
+          <Execute Statement="Result:= ReadFloat"/>
+        </RepeatUntilLoop>
+      </Block>
+    </Function>
+
+    <Property Identifier="TSiglentSPD3303X.Enabled" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="Int32"/>
+      </Parameters>
+      <Getter>
+        <Variable Identifier="retCount"/>
+        <Case Expression="Channel">
+          <On Select="0, 1, 2">
+            <Execute Statement="OleCheck(Message.WriteString(Format('CH%d:OUTPut?', Channel), retCount))"/>
+            <Execute Statement="Result:= ReadOnOff"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="RaiseInvalidChannel"/>
+          </Otherwise>
+        </Case>
+      </Getter>
+      <Setter>
+        <Variable Identifier="retCount"/>
+        <Case Expression="Channel">
+          <On Select="1, 2, 3">
+            <Variable Identifier="ValueS" Type="string" Init="IfElse(Value, 'ON', 'OFF')"/>
+            <Execute Statement="OleCheck(Message.WriteString(Format('OUTPut CH%d,%s', Channel, ValueS), retCount))"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="RaiseInvalidChannel"/>
+          </Otherwise>
+        </Case>
+      </Setter>
+    </Property>
+
+  </Procedures>
+</pkg:Library>

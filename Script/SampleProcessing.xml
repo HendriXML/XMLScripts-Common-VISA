@@ -1,0 +1,282 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<pkg:Library
+  xsi:schemaLocation="urn:schemas-www-wisware.nl-scriptingpackages ../XmlSchemas.Common.XmlScript/XMLScripting.Packages.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:pkg="urn:schemas-www-wisware.nl-scriptingpackages"
+  xmlns:sys="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:ado="urn:schemas-www-wisware.nl-xmlscripting-ado"
+  xmlns:fil="urn:schemas-www-wisware.nl-xmlscripting-filemanagement"
+  xmlns:fwl="urn:schemas-www-wisware.nl-xmlscripting-windowsfirewall"
+  xmlns:inx="urn:schemas-www-wisware.nl-xmlscripting-index"
+  xmlns:lil="urn:schemas-www-wisware.nl-xmlscripting-linkedlist"
+  xmlns:msx="urn:schemas-www-wisware.nl-xmlscripting-xml"
+  xmlns:reg="urn:schemas-www-wisware.nl-xmlscripting-registry"
+  xmlns:rep="urn:schemas-www-wisware.nl-xmlscripting-report"
+  xmlns:sts="urn:schemas-www-wisware.nl-xmlscripting-showstatus"
+  xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
+  xmlns:stm="urn:schemas-www-wisware.nl-xmlscripting-statemanagement">
+  >
+  <Uses>
+    <Use Identifier="VISAInstrument"/>
+  </Uses>
+  
+  <Type>
+    
+    <DataClass Identifier="TRawSamplesOptions">
+      <Field Identifier="WriteMinValue" Type="Boolean"/>
+      <Field Identifier="WriteMaxValue" Type="Boolean"/>
+      <Field Identifier="WriteRawSum" Type="Boolean"/>
+      <Field Identifier="LimitSamples" Type="UInt32"/>
+    </DataClass>
+
+  </Type>
+  
+  <Procedures>
+
+    <Procedure Identifier="SaveRawSamplesToFile">
+      <Parameters>
+        <Parameter Identifier="Samples" Type="TRawSampleCollection"/>
+        <Parameter Identifier="Filename" Type="string"/>
+        <Parameter Identifier="Options" Type="TRawSamplesOptions"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="WriteMinValue" Type="Boolean" Init="False"/>
+        <Variable Identifier="WriteMaxValue" Type="Boolean" Init="False"/>
+        <Variable Identifier="WriteRawSum" Type="Boolean" Init="False"/>
+        <Variable Identifier="LimitSamples" Type="UInt32" Init="0"/>
+        <Block Condition="Assigned(Options)">
+          <Execute Statement="WriteMinValue:= Options.WriteMinValue"/>
+          <Execute Statement="WriteMaxValue:= Options.WriteMaxValue"/>
+          <Execute Statement="WriteRawSum:= Options.WriteRawSum"/>
+          <Execute Statement="LimitSamples:= Options.LimitSamples"/>
+        </Block>
+        <Variable Identifier="XmlDoc" Type="IXMLDomDocument"/>
+        <Variable Identifier="RootE" Type="IXMLDomElement"/>
+        <Variable Identifier="DataE" Type="IXMLDomElement"/>
+        <Variable Identifier="PointE" Type="IXMLDomElement"/>
+        <Variable Identifier="Start" Type="Int32" Init="(Samples.Count + 1) div 4"/>
+        <Variable Identifier="Count" Type="Int32" Init="Samples.Count - (2 * Start)"/>
+        <!--<Variable Identifier="Start" Type="Int32" Init="0"/>
+        <Variable Identifier="Count" Type="Int32" Init="Samples.Count"/>-->
+        <rep:Reporter.Information Text="Format('Start: %d, Count: %d', Start, Count)"/>
+        <Variable Identifier="VFactor" Type="Extended" Init="Samples.VFactor / Count"/>
+        <Variable Identifier="VFactorSingle" Type="Extended" Init="Samples.VFactor"/>
+        <Variable Identifier="VOffset" Type="Extended" Init="Samples.VOffset"/>
+        <Variable Identifier="Time" Type="Extended" Init="Samples.Time"/>
+        <Variable Identifier="TimePerSample" Type="Extended" Init="Samples.TimePerSample"/>
+        <Variable Identifier="Value" Type="Int32"/>
+        <msx:Document.Create Identifier="XmlDoc"/>
+        <msx:Document.CreateElement Document="XmlDoc" Element="RootE" Name="WaveForm" ParentElement="XmlDoc"/>
+        <msx:Element.SetAttribute Element="RootE" Name="xmlns:xsi" Value="'http://www.w3.org/2001/XMLSchema-instance'"/>
+        <msx:Element.SetAttribute Element="RootE" Name="xsi:noNamespaceSchemaLocation" Namespace="http://www.w3.org/2001/XMLSchema-instance" Value="'WaveForm.xsd'"/>
+        <msx:Document.CreateElement Document="XmlDoc" Element="DataE" Name="Data" ParentElement="RootE"/>
+        <msx:Element.SetAttribute Element="DataE" Name="Count" Value="Format('%d', Count)"/>
+        <msx:Element.SetAttribute Element="DataE" Name="VFactor" Value="FloatTocode(Samples.VFactor)"/>
+        <msx:Element.SetAttribute Element="DataE" Name="VOffset" Value="FloatTocode(Samples.VOffset)"/>
+        <msx:Element.SetAttribute Element="DataE" Name="Time" Value="FloatTocode(Samples.Time)"/>
+        <msx:Element.SetAttribute Element="DataE" Name="TimePerSample" Value="FloatTocode(TimePerSample)"/>
+        <lil:LinkedList.Iterate Head="Samples.SamplePointManager.SampleHead" ItemType="TSamplePoint" RunningItem="Item" Next="Item.Next">
+          <msx:Document.CreateElement Document="XmlDoc" Element="PointE" Name="P" ParentElement="DataE"/>
+          <msx:Element.SetAttribute Element="PointE" Name="X" Value="FloatTocode(Time)"/>
+          <Execute Statement="Value:= Item.GetSum(Start, Count)"/>
+          <!--<rep:Reporter.Information Text="Format('Sum: %d', Value)"/>-->
+          <msx:Element.SetAttribute Element="PointE" Name="S" Value="Format('%d', Value)"/>
+          <msx:Element.SetAttribute Element="PointE" Name="Y" Value="FloatTocode(VOffset + VFactor * Value)"/>
+          <msx:Element.SetAttribute Element="PointE" Name="Y.min" Value="FloatTocode(VOffset + VFactorSingle * Item.MinValue)" Condition="WriteMinValue"/>
+          <msx:Element.SetAttribute Element="PointE" Name="Y.max" Value="FloatTocode(VOffset + VFactorSingle * Item.MaxValue)" Condition="WriteMaxValue"/>
+          <msx:Element.SetAttribute Element="PointE" Name="Y.raw" Value="Value" Condition="WriteRawSum"/>
+          <Execute Statement="Time:= Time + TimePerSample"/>
+        </lil:LinkedList.Iterate>
+        <Variable Identifier="WriteStream" Type="TSequentialFileWriteStream" Init="TSequentialFileWriteStream.Create(Filename)"/>
+        <Variable Identifier="Stream" Type="IStream" Init="WriteStream as IStream"/>
+        <Variable Identifier="MXWriter" Type="IMXWriter" Init="CoMXXMLWriter60.Create"/>
+        <Execute Statement="MXWriter.Output:= Stream"/>
+        <Execute Statement="MXWriter.Indent:= True"/>
+        <Execute Statement="MXWriter.encoding:= 'utf-8'"/>
+        <Variable Identifier="Output" Type="Variant" Init="MXWriter"/>
+        <Variable Identifier="XMLReader" Type="ISAXXMLReader" Init="CoSAXXMLReader60.Create"/>
+        <Execute Statement="XMLReader.putContentHandler(MXWriter as ISAXContentHandler)"/>
+        <Execute Statement="XMLReader.Parse(XmlDoc)"/>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="LoadSamplesFromFile" Type="TScopeSampleCollection">
+      <Parameters>
+        <Parameter Identifier="Filename" Type="string"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="XmlDoc" Type="IXMLDomDocument"/>
+        <rep:Reporter.Information Text="Filename" Markup="Header3"/>
+        <msx:Document.Create Identifier="XmlDoc"/>
+        <msx:Document.LoadFromFile Document="XmlDoc" Filename="Filename"/>
+        <Variable Identifier="Tail" Type="TScopeSample"/>
+        <Variable Identifier="Item" Type="TScopeSample"/>
+        <Execute Statement="Result:= TScopeSampleCollection.Create"/>
+        <stm:StateHandler InitialState="FirstItem">
+          <msx:Node.IterateChilds Node="XmlDoc">
+            <msx:OnElement baseName="'WaveForm'">
+              <msx:Block>
+                <msx:Node.IterateChilds Node="Node">
+                  <msx:OnElement baseName="'Data'">
+                    <msx:Block>
+                      <msx:Node.IterateChilds Node="Node">
+                        <msx:OnElement baseName="'P'">
+                          <msx:Attribute baseName="'X'" />
+                          <msx:Attribute baseName="'Y'"/>
+                          <msx:Block>
+                            <Variable Identifier="Time" Type="Extended" Init="CodeToFloat(X.Text)"/>
+                            <Variable Identifier="Value" Type="Extended" Init="CodeToFloat(Y.Text)"/>
+                            <stm:HandleStates>
+                              <stm:State Name="FirstItem">
+                                <Execute Statement="Tail:= TScopeSample.Create(Time, Value)"/>
+                                <Execute Statement="Result.SampleHead:= Tail"/>
+                                <stm:SetState Name="AddItem"/>
+                              </stm:State>
+                              <stm:State Name="AddItem">
+                                <Execute Statement="Item:= TScopeSample.Create(Time, Value)"/>
+                                <Execute Statement="Tail.Next:= Item"/>
+                                <Execute Statement="Tail:= Item"/>
+                              </stm:State>
+                            </stm:HandleStates>
+                            <rep:Reporter.Information Text="Format('%g, %g', Time, Value)"/>
+                          </msx:Block>
+                        </msx:OnElement>
+                      </msx:Node.IterateChilds>
+                    </msx:Block>
+                  </msx:OnElement>
+                </msx:Node.IterateChilds>
+              </msx:Block>
+            </msx:OnElement>
+          </msx:Node.IterateChilds>
+        </stm:StateHandler>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="AddSamplesToInterpolator">
+      <Parameters>
+        <Parameter Identifier="Samples" Type="TScopeSampleCollection"/>
+        <Parameter Identifier="Interpolater" Type="TInterpolater"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Interpolater.BeginUpdate"/>
+        <TryFinally>
+          <Try>
+            <lil:LinkedList.Iterate Head="Samples.SampleHead" RunningItem="Item" ItemType="TScopeSample" Next="Item.Next">
+              <Execute Statement="Interpolater.AddValue(Item.Time, Item.Value)"/>
+            </lil:LinkedList.Iterate>
+          </Try>
+          <Finally>
+            <Execute Statement="Interpolater.EndUpdate"/>
+          </Finally>
+        </TryFinally>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="TimeAveragedRisingSamples" Type="TScopeSampleCollection">
+      <Parameters>
+        <Parameter Identifier="Samples" Type="TScopeSampleCollection"/>
+        <Parameter Identifier="MinVerticalDifference" Type="Extended"/>
+        <Parameter Identifier="MaxAveragedSamples" Type="UInt32"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= TScopeSampleCollection.Create"/>
+        <Variable Identifier="Tail" Type="TScopeSample"/>
+        <Variable Identifier="Item" Type="TScopeSample"/>
+        <Variable Identifier="StartTime" Type="Extended"/>
+        <Variable Identifier="CheckValue" Type="Extended"/>
+        <Variable Identifier="EndTime" Type="Extended"/>
+        <Variable Identifier="SummedValues" Type="Extended"/>
+        <Variable Identifier="Count" Type="UInt32" Init="0"/>
+        <stm:StateHandler InitialState="Start">
+          <lil:LinkedList.Iterate Head="Samples.SampleHead" RunningItem="Item" ItemType="TScopeSample" Next="Item.Next">
+            <stm:HandleStates>
+              <stm:State Name="Start">
+                <Execute Statement="StartTime:= Item.Time"/>
+                <Execute Statement="SummedValues:= Item.Value"/>
+                <Execute Statement="CheckValue:= SummedValues + MinVerticalDifference"/>
+                <Execute Statement="Count:= 1"/>
+                <stm:SetState Name="InFirstGroup"/>
+              </stm:State>
+              <stm:State Name="InFirstGroup">
+                <Execute Statement="EndTime:= Item.Time"/>
+                <Execute Statement="SummedValues:= SummedValues + Item.Value"/>
+                <Execute Statement="Count:= Count + 1"/>
+                <Block Condition="(Item.Value &gt; CheckValue) or (Count &gt;= MaxAveragedSamples)">
+                  <Execute Statement="Tail:= TScopeSample.Create((StartTime + EndTime) * 0.5, SummedValues / Count)"/>
+                  <Execute Statement="Result.SampleHead:= Tail"/>
+                  <stm:SetState Name="NewGroup"/>
+                  <Execute Statement="Count:= 0"/>
+                </Block>
+              </stm:State>
+              <stm:State Name="NewGroup">
+                <Execute Statement="StartTime:= Item.Time"/>
+                <Execute Statement="SummedValues:= Item.Value"/>
+                <Execute Statement="CheckValue:= SummedValues + MinVerticalDifference"/>
+                <Execute Statement="Count:= 1"/>
+                <stm:SetState Name="InGroup"/>
+              </stm:State>
+              <stm:State Name="InGroup">
+                <Execute Statement="EndTime:= Item.Time"/>
+                <Execute Statement="SummedValues:= SummedValues + Item.Value"/>
+                <Execute Statement="Count:= Count + 1"/>
+                <Block Condition="(Item.Value &gt; CheckValue) or (Count &gt;= MaxAveragedSamples)">
+                  <Execute Statement="Item:= TScopeSample.Create((StartTime + EndTime) * 0.5, SummedValues / Count)"/>
+                  <Execute Statement="Tail.Next:= Item"/>
+                  <Execute Statement="Tail:= Item"/>
+                  <stm:SetState Name="NewGroup"/>
+                  <Execute Statement="Count:= 0"/>
+                </Block>
+              </stm:State>
+            </stm:HandleStates>
+          </lil:LinkedList.Iterate>
+          <Block Condition="Count &gt; 0">
+            <Execute Statement="Item:= TScopeSample.Create((StartTime + EndTime) * 0.5, SummedValues / Count)"/>
+            <Choose>
+              <When Expression="Assigned(Result.SampleHead)">
+                <Execute Statement="Tail.Next:= Item"/>
+              </When>
+              <Otherwise>
+                <Execute Statement="Result.SampleHead:= Item"/>
+              </Otherwise>
+            </Choose>
+          </Block>
+        </stm:StateHandler>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="SaveSamplesToFile">
+      <Parameters>
+        <Parameter Identifier="Samples" Type="TScopeSampleCollection"/>
+        <Parameter Identifier="Filename" Type="string"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="XmlDoc" Type="IXMLDomDocument"/>
+        <Variable Identifier="RootE" Type="IXMLDomElement"/>
+        <Variable Identifier="DataE" Type="IXMLDomElement"/>
+        <Variable Identifier="PointE" Type="IXMLDomElement"/>
+        <msx:Document.Create Identifier="XmlDoc"/>
+        <msx:Document.CreateElement Document="XmlDoc" Element="RootE" Name="WaveForm" ParentElement="XmlDoc"/>
+        <msx:Element.SetAttribute Element="RootE" Name="xmlns:xsi" Value="'http://www.w3.org/2001/XMLSchema-instance'"/>
+        <msx:Element.SetAttribute Element="RootE" Name="xsi:noNamespaceSchemaLocation" Namespace="http://www.w3.org/2001/XMLSchema-instance" Value="'WaveForm.xsd'"/>
+        <msx:Document.CreateElement Document="XmlDoc" Element="DataE" Name="Data" ParentElement="RootE"/>
+        <lil:LinkedList.Iterate Head="Samples.SampleHead" ItemType="TScopeSample" RunningItem="Item" Next="Item.Next">
+          <msx:Document.CreateElement Document="XmlDoc" Element="PointE" Name="P" ParentElement="DataE"/>
+          <msx:Element.SetAttribute Element="PointE" Name="X" Value="FloatTocode(Item.Time)"/>
+          <msx:Element.SetAttribute Element="PointE" Name="Y" Value="FloatTocode(Item.Value)"/>
+        </lil:LinkedList.Iterate>
+        <Variable Identifier="WriteStream" Type="TSequentialFileWriteStream" Init="TSequentialFileWriteStream.Create(Filename)"/>
+        <Variable Identifier="Stream" Type="IStream" Init="WriteStream as IStream"/>
+        <Variable Identifier="MXWriter" Type="IMXWriter" Init="CoMXXMLWriter60.Create"/>
+        <Execute Statement="MXWriter.Output:= Stream"/>
+        <Execute Statement="MXWriter.Indent:= True"/>
+        <Execute Statement="MXWriter.encoding:= 'utf-8'"/>
+        <Variable Identifier="Output" Type="Variant" Init="MXWriter"/>
+        <Variable Identifier="XMLReader" Type="ISAXXMLReader" Init="CoSAXXMLReader60.Create"/>
+        <Execute Statement="XMLReader.putContentHandler(MXWriter as ISAXContentHandler)"/>
+        <Execute Statement="XMLReader.Parse(XmlDoc)"/>
+      </Block>
+    </Procedure>
+
+  </Procedures>
+</pkg:Library>
