@@ -16,13 +16,13 @@
   xmlns:sts="urn:schemas-www-wisware.nl-xmlscripting-showstatus"
   xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
   xmlns:stm="urn:schemas-www-wisware.nl-xmlscripting-statemanagement">
-  >
   <Uses>
     <Use Identifier="VISAInstrument"/>
   </Uses>
-  
+
   <Type>
-    
+    <Alias Identifier="TMicroVolt" RefersTo="Integer"/>
+
     <DataClass Identifier="TRawSamplesOptions">
       <Field Identifier="WriteMinValue" Type="Boolean"/>
       <Field Identifier="WriteMaxValue" Type="Boolean"/>
@@ -30,13 +30,66 @@
       <Field Identifier="LimitSamples" Type="UInt32"/>
     </DataClass>
 
+    <DataClass Identifier="TTestSample" DefaultConstructor="createonly">
+      <Field Identifier="uvoltOutVoltage" Type="TMicroVolt"/>
+      <Field Identifier="uvoltMeasuredVoltage" Type="TMicroVolt"/>
+      <Field Identifier="Next" Type="TTestSample"/>
+    </DataClass>
+
+    <DataClass Identifier="TTestSampleCollection">
+      <Field Identifier="SampleHead" Type="TTestSample"/>
+      <Field Identifier="SampleTail" Type="TTestSample"/>
+    </DataClass>
+
+    <DataClass Identifier="TVoltRange">
+      <Field Identifier="uvoltLow" Type="TMicroVolt"/>
+      <Field Identifier="uvoltHigh" Type="TMicroVolt"/>
+      <Field Identifier="uvoltOffset" Type="TMicroVolt"/>
+      <Field Identifier="Next" Type="TVoltRange"/>
+    </DataClass>
+
+    <DataClass Identifier="TTestSampleBatch">
+      <Field Identifier="SampleHead" Type="TTestSample"/>
+      <Field Identifier="SampleTail" Type="TTestSample"/>
+      <Field Identifier="AWGRange" Type="TVoltRange"/>
+      <Field Identifier="DSORange" Type="TVoltRange"/>
+      <Field Identifier="Next" Type="TTestSampleBatch"/>
+    </DataClass>
+
   </Type>
-  
+
   <Procedures>
+    <Function Identifier="TVoltRange.InRange">
+      <Parameters>
+        <Parameter Identifier="uvoltVoltage" Type="TMicroVolt"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= (uvoltVoltage &gt;= uvoltLow) and (uvoltVoltage &lt; uvoltHigh)"/>
+      </Block>
+    </Function>
+    
+    <Procedure Identifier="TTestSampleCollection.Add">
+      <Parameters>
+        <Parameter Identifier="uvoltOutVoltage" Type="TMicroVolt"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="Sample" Type="TTestSample" Init="TTestSample.Create"/>
+        <Execute Statement="Sample.uvoltOutVoltage:= uvoltOutVoltage"/>
+        <Choose>
+          <When Expression="Assigned(SampleHead)">
+            <Execute Statement="SampleTail.Next:= Sample"/>
+          </When>
+          <Otherwise>
+            <Execute Statement="SampleHead:= Sample"/>
+          </Otherwise>
+        </Choose>
+        <Execute Statement="SampleTail:= Sample"/>
+      </Block>
+    </Procedure>
 
     <Procedure Identifier="SaveRawSamplesToFile">
       <Parameters>
-        <Parameter Identifier="Samples" Type="TRawSampleCollection"/>
+        <Parameter Identifier="Samples" Type="TMultiFrameAcquisitionInfo"/>
         <Parameter Identifier="Filename" Type="string"/>
         <Parameter Identifier="Options" Type="TRawSamplesOptions"/>
       </Parameters>

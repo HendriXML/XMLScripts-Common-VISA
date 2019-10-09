@@ -17,25 +17,43 @@
   xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
   >
   <Type>
-    <DataClass Identifier="TVISAInstrument">
+    <Enumeration Identifier="TVisaAttributeState" Elements="NoValue, ValidValue, InvalidValue, PendingChange"/>
+    
+    <DataClass Identifier="TVisaInstrument">
       <Field Identifier="VisaSession" Type="IVisaSession"/>
       <Field Identifier="Message" Type="IMessage"/>
+    </DataClass>
+    
+    <DataClass Identifier="TVisaAtrributeGroup" DefaultConstructor="none">
+      <VirtualMethod Identifier="vmSetAttributeStates"/>
+      <Field Identifier="Instrument" Type="TVisaInstrument"/>
     </DataClass>
 
     <DataClass Identifier="TRawSample">
       <Field Identifier="Value" Type="Int32"/>
       <Field Identifier="Next" Type="TRawSample"/>
     </DataClass>
-    
-    <DataClass Identifier="TRawSampleCollection">
-      <Field Identifier="SamplePointManager" Type="TSamplePointManager"/>
-      <Field Identifier="Count" Type="UInt32"/>
+
+    <DataClass Identifier="TAcquisitionInfo">
       <Field Identifier="Time" Type="Extended"/>
       <Field Identifier="TimePerSample" Type="Extended"/>
       <Field Identifier="VFactor" Type="Extended"/>
       <Field Identifier="VOffset" Type="Extended"/>
     </DataClass>
-    
+
+    <DataClass Identifier="TMultiFrameAcquisitionInfo" Inherit="TAcquisitionInfo">
+      <VirtualMethod Identifier="vmFinalize" IsFinalizer="true"/>
+      <Field Identifier="SamplePointManager" Type="TSamplePointManager"/>
+      <Field Identifier="Initial" Type="Boolean"/>
+      <Field Identifier="Count" Type="UInt32"/>
+    </DataClass>
+
+    <DataClass Identifier="TSingleSummedSampleAcquisitionInfo" Inherit="TAcquisitionInfo">
+      <VirtualMethod Identifier="vmFinalize" IsFinalizer="true"/>
+      <Field Identifier="SamplePointManager" Type="TSamplePoint32Manager"/>
+      <Field Identifier="Sample" Type="TSamplePoint32"/>
+    </DataClass>
+
     <DataClass Identifier="TScopeSample">
       <Field Identifier="Time" Type="Extended"/>
       <Field Identifier="Value" Type="Extended"/>
@@ -48,6 +66,89 @@
 
   </Type>
   <Procedures>
+    <Constructor Identifier="TMultiFrameAcquisitionInfo.Create">
+      <Block>
+        <Execute Statement="SamplePointManager:= TSamplePointManager.Create"/>
+        <Execute Statement="Initial:= True"/>
+      </Block>
+    </Constructor>
+
+    <Procedure Identifier="TMultiFrameAcquisitionInfo.Finalize" VirtualMethod="vmFinalize">
+      <Block>
+        <Execute Statement="SamplePointManager.Free"/>
+      </Block>
+    </Procedure>
+
+    <Constructor Identifier="TSingleSummedSampleAcquisitionInfo.Create">
+      <Block>
+        <Execute Statement="SamplePointManager:= TSamplePoint32Manager.Create"/>
+        <Execute Statement="Sample:= SamplePointManager.NewPoint"/>
+      </Block>
+    </Constructor>
+
+    <Procedure Identifier="TSingleSummedSampleAcquisitionInfo.Finalize" VirtualMethod="vmFinalize">
+      <Block>
+        <Execute Statement="SamplePointManager.Free"/>
+      </Block>
+    </Procedure>
+
+    <Constructor Identifier="TVisaAtrributeGroup.Create">
+      <Parameters>
+        <Parameter Identifier="Instrument" Type="TVisaInstrument"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Self.Instrument:= Instrument"/>
+      </Block>
+    </Constructor>
+
+    <Procedure Identifier="TVisaAtrributeGroup.RaiseAttributeError">
+      <Parameters>
+        <Parameter Identifier="Attribute" Type="string"/>
+      </Parameters>
+      <Block>
+        <Raise Expression="Exception.Create('Attribute ' + Attribute + ' could not be determined')"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TVisaAtrributeGroup.SetAttributeStates" VirtualMethod="vmSetAttributeStates">
+      <Parameters>
+        <Parameter Identifier="State" Type="TVisaAttributeState"/>
+      </Parameters>
+      <Block>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TVisaInstrument.BeginRead">
+      <Parameters>
+        <Parameter Identifier="AtrributeGroup" Type="TVisaAtrributeGroup"/>
+      </Parameters>
+      <Block>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TVisaInstrument.EndRead">
+      <Parameters>
+        <Parameter Identifier="AtrributeGroup" Type="TVisaAtrributeGroup"/>
+      </Parameters>
+      <Block>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TVisaInstrument.BeginWrite">
+      <Parameters>
+        <Parameter Identifier="AtrributeGroup" Type="TVisaAtrributeGroup"/>
+      </Parameters>
+      <Block>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TVisaInstrument.EndWrite">
+      <Parameters>
+        <Parameter Identifier="AtrributeGroup" Type="TVisaAtrributeGroup"/>
+      </Parameters>
+      <Block>
+      </Block>
+    </Procedure>
 
     <Function Identifier="CreateVisaSession" Type="IVisaSession">
       <Parameters>
@@ -139,7 +240,7 @@
         <Execute Statement="OleCheck(Message.WriteString(Value, retCount))"/>
       </Block>
     </Procedure>
-
+    
     <Function Identifier="TVISAInstrument.ReadOnOff" Type="Boolean">
       <Block>
         <Variable Identifier="readResult"/>
@@ -205,6 +306,24 @@
         <Execute Statement="Result:= QueryString('*IDN?')"/>
       </Getter>
     </Property>
+
+    <Procedure Identifier="TVISAInstrument.ExclusiveLock">
+      <Parameters>
+        <Parameter Identifier="Timeout" Type="Int32"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="AccessKey"/>
+        <Execute Statement="OleCheck(VisaSession.LockRsrc(TAccessMode.EXCLUSIVE_LOCK, Timeout, '', AccessKey))"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TVISAInstrument.UnLock">
+      <Block>
+        <Execute Statement="OleCheck(VisaSession.UnlockRsrc)"/>
+      </Block>
+    </Procedure>
+    
+
 
   </Procedures>
 </pkg:Library>

@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<pkg:Library
+  xsi:schemaLocation="urn:schemas-www-wisware.nl-scriptingpackages ../XmlSchemas.Common.XmlScript/XMLScripting.Packages.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:pkg="urn:schemas-www-wisware.nl-scriptingpackages"
+  xmlns:sys="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:ado="urn:schemas-www-wisware.nl-xmlscripting-ado"
+  xmlns:fil="urn:schemas-www-wisware.nl-xmlscripting-filemanagement"
+  xmlns:fwl="urn:schemas-www-wisware.nl-xmlscripting-windowsfirewall"
+  xmlns:inx="urn:schemas-www-wisware.nl-xmlscripting-index"
+  xmlns:lil="urn:schemas-www-wisware.nl-xmlscripting-linkedlist"
+  xmlns:msx="urn:schemas-www-wisware.nl-xmlscripting-xml"
+  xmlns:reg="urn:schemas-www-wisware.nl-xmlscripting-registry"
+  xmlns:rep="urn:schemas-www-wisware.nl-xmlscripting-report"
+  xmlns:sts="urn:schemas-www-wisware.nl-xmlscripting-showstatus"
+  xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
+  xmlns:stm="urn:schemas-www-wisware.nl-xmlscripting-statemanagement">
+  <Uses>
+    <Use Identifier="VISAInstrument"/>
+  </Uses>
+
+  <Type>
+    <Enumeration Identifier="TSiglentSDG1000XBasicWaveKind" Elements="Ch1, Ch2" />
+
+    <DataClass Identifier="TSiglentSDG1000XBasicWave" Inherit="TVisaAtrributeGroup">
+      <VirtualMethod Identifier="vmSetAttributeStates" Override="true"/>
+      <Field Identifier="ChannelKind" Type="TSiglentSDG1000XBasicWaveKind"/>
+      <Field Identifier="_FrequencyState" Type="TVisaAttributeState"/>
+      <Field Identifier="_Frequency" Type="Extended"/>
+    </DataClass>
+
+    <DataClass Identifier="TSiglentSDG1000X" Inherit="TVISAInstrument">
+      <Field Identifier="BasicWave1" Type="TSiglentSDG1000XBasicWave"/>
+      <Field Identifier="BasicWave2" Type="TSiglentSDG1000XBasicWave"/>
+    </DataClass>
+
+  </Type>
+
+  <Constants>
+    <Constant Identifier="SDG1000XFixedSamples" Type="UInt32" Expression="16384"/>
+  </Constants>
+
+  <Procedures>
+    <Constructor Identifier="TSiglentSDG1000XBasicWave.Create">
+      <Parameters>
+        <Parameter Identifier="Instrument" Type="TVisaInstrument"/>
+        <Parameter Identifier="ChannelKind" Type="TSiglentSDG1000XBasicWaveKind"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="inherited Create(Instrument)"/>
+        <Execute Statement="Self.ChannelKind:= ChannelKind"/>
+      </Block>
+    </Constructor>
+
+    <Procedure Identifier="TSiglentSDG1000XBasicWave.SetAttributeStates" VirtualMethod="vmSetAttributeStates">
+      <Parameters>
+        <Parameter Identifier="State" Type="TVisaAttributeState"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="_FrequencyState:= State"/>
+      </Block>
+    </Procedure>
+
+    <Property Identifier="TSiglentSDG1000XBasicWave.Frequency" Type="Extended">
+      <Getter>
+        <Execute Statement="Instrument.BeginRead(Self)"/>
+        <TryFinally>
+          <Try>
+            <Execute Statement="RaiseAttributeError('Frequency')" Condition="_FrequencyState &lt;&gt; TVisaAttributeState.ValidValue"/>
+            <Execute Statement="Result:= _Frequency"/>
+          </Try>
+          <Finally>
+            <Execute Statement="Instrument.EndRead(Self)"/>
+          </Finally>
+        </TryFinally>
+      </Getter>
+      <Setter>
+        <Execute Statement="Instrument.BeginWrite(Self)"/>
+        <TryFinally>
+          <Try>
+            <Execute Statement="_FrequencyState:= TVisaAttributeState.PendingChange"/>
+            <Execute Statement="_Frequency:= Value"/>
+          </Try>
+          <Finally>
+            <Execute Statement="Instrument.EndWrite(Self)"/>
+          </Finally>
+        </TryFinally>
+      </Setter>
+    </Property>
+
+    <Constructor Identifier="TSiglentSDG1000X.Create">
+      <Parameters>
+        <Parameter Identifier="VisaSession" Type="IVisaSession"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="inherited Create(VisaSession)" />
+        <Execute Statement="BasicWave1:= TSiglentSDG1000XBasicWave.Create(Self, TSiglentSDG1000XBasicWaveKind.Ch1)"/>
+        <Execute Statement="BasicWave2:= TSiglentSDG1000XBasicWave.Create(Self, TSiglentSDG1000XBasicWaveKind.Ch2)"/>
+      </Block>
+    </Constructor>
+  </Procedures>
+
+
+</pkg:Library>
