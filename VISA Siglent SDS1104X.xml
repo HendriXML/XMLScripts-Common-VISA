@@ -1040,6 +1040,7 @@
         <Variable Identifier="ProcessKind" Type="TProcessKind"/>
         <Variable Identifier="WaveForm" Type="TWaveFormFormat"/>
         <Variable Identifier="FloatValue" Type="Extended"/>
+        <Variable Identifier="TimePerSample" Type="Extended"/>
         <Variable Identifier="ProbeAttenuation" Type="Extended"/>
         <Variable Identifier="BlockStart" Type="Int32"/>
         <Variable Identifier="NumberOfPoints" Type="Int32"/>
@@ -1054,6 +1055,7 @@
         <Variable Identifier="ActiveDataPoint" Type="TSamplePoint"/>
         <Variable Identifier="SamplePointManager" Type="TSamplePointManager"/>
         <Variable Identifier="SingleSample" Type="TSamplePoint32"/>
+        <Variable Identifier="PointsPerScreen" Type="Int32"/>
       </Variables>
       <Block>
         <Choose>
@@ -1171,20 +1173,37 @@
                         <rep:Reporter.Information Text="Format('Nr. of points: %d', NumberOfPoints)" Condition="IsVerbose"/>
 
                         <Execute Statement="Stream.Position:= BlockStart + coWaveSizeOffset"/>
-                        <Raise Condition="Stream.ReadDataUInt32(NumberOfPoints) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                        <Raise Condition="Stream.ReadDataUInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                        <rep:Reporter.Information Text="Format('WaveSize: %d', UInt32Data)" Condition="IsVerbose"/>
+
+                        <Execute Statement="Stream.Position:= BlockStart + coPointsPerScreen"/>
+                        <Raise Condition="Stream.ReadDataInt32(PointsPerScreen) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                        <rep:Reporter.Information Text="Format('PointsPerScreen: %d', PointsPerScreen)" Condition="IsVerbose"/>
+
+                        <Execute Statement="Stream.Position:= BlockStart + coFirstValidPntOffset"/>
+                        <Raise Condition="Stream.ReadDataInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                        <rep:Reporter.Information Text="Format('FirstValidPnt: %d', UInt32Data)" Condition="IsVerbose"/>
+
+                        <Execute Statement="Stream.Position:= BlockStart + coLastValidPntOffset"/>
+                        <Raise Condition="Stream.ReadDataInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                        <rep:Reporter.Information Text="Format('LastValidPnt: %d', UInt32Data)" Condition="IsVerbose"/>
 
                         <Execute Statement="Stream.Position:= BlockStart + coVUnitOffset"/>
                         <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                        <Execute Statement="AcquisitionInfo.VUnit:= AnsiData"/>
                         <rep:Reporter.Information Text="Format('VUnit: %s', AnsiData)" Condition="IsVerbose"/>
 
                         <Execute Statement="Stream.Position:= BlockStart + coProbeAttenuationOffset"/>
                         <Raise Condition="Stream.ReadDataSingle(ProbeAttenuation) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                        <Execute Statement="AcquisitionInfo.ProbeAttenuation:= ProbeAttenuation"/>
                         <rep:Reporter.Information Text="Format('ProbeAttenuation: %g', ProbeAttenuation)" Condition="IsVerbose"/>
                         
                         <Execute Statement="Stream.Position:= BlockStart + coVerticalGainOffset"/>
                         <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
                         <rep:Reporter.Information Text="Format('VerticalGain: %g', FloatValue)" Condition="IsVerbose"/>
-                        <Execute Statement="AcquisitionInfo.VFactor:= FloatValue * cVGran * ProbeAttenuation"/>
+                        <Execute Statement="FloatValue:= FloatValue * ProbeAttenuation"/>
+                        <Execute Statement="AcquisitionInfo.VDiv:= FloatValue"/>
+                        <Execute Statement="AcquisitionInfo.VFactor:= FloatValue * cVGran"/>
 
                         <Execute Statement="Stream.Position:= BlockStart + coVerticalOffsetOffset"/>
                         <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
@@ -1192,15 +1211,17 @@
                         <Execute Statement="AcquisitionInfo.VOffset:= -FloatValue * ProbeAttenuation"/>
 
                         <Execute Statement="Stream.Position:= BlockStart + coHorizontalIntervalOffset"/>
-                        <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('HorizontalInterval: %g', FloatValue)" Condition="IsVerbose"/>
-                        <Execute Statement="AcquisitionInfo.TimePerSample:= FloatValue"/>
+                        <Raise Condition="Stream.ReadDataSingle(TimePerSample) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                        <rep:Reporter.Information Text="Format('HorizontalInterval: %g', TimePerSample)" Condition="IsVerbose"/>
+                        <Execute Statement="AcquisitionInfo.HDiv:= TimePerSample * PointsPerScreen / cHDivisions"/>
+                        <Execute Statement="AcquisitionInfo.TimePerSample:= TimePerSample"/>
 
                         <Execute Statement="Stream.Position:= BlockStart + coHorizontalOffsetOffset"/>
                         <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
                         <rep:Reporter.Information Text="Format('HorizontalOffset: %g', FloatValue)" Condition="IsVerbose"/>
-                        <Execute Statement="AcquisitionInfo.Time:= FloatValue"/>
-
+                        <Execute Statement="AcquisitionInfo.Time:= FloatValue - NumberOfPoints * TimePerSample * 0.5"/>
+                        <Execute Statement="AcquisitionInfo.HOffset:= FloatValue"/>
+                        
                         <Execute Statement="Stream.Position:= BlockStart + coSegmentIndexOffset"/>
                         <Raise Condition="Stream.ReadDataInt32(Int32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
                         <rep:Reporter.Information Text="Format('SegmentIndex: %d', Int32Data)" Condition="IsVerbose"/>

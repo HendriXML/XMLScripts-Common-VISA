@@ -23,11 +23,12 @@
   <Type>
     <Alias Identifier="TMicroVolt" RefersTo="Integer"/>
 
-    <DataClass Identifier="TRawSamplesOptions">
+    <DataClass Identifier="TSaveRawSamplesOptions">
       <Field Identifier="WriteMinValue" Type="Boolean"/>
       <Field Identifier="WriteMaxValue" Type="Boolean"/>
       <Field Identifier="WriteRawSum" Type="Boolean"/>
       <Field Identifier="LimitSamples" Type="UInt32"/>
+      <Field Identifier="DiscardExtremesPercentage" Type="UInt32"/>
     </DataClass>
 
     <DataClass Identifier="TTestSample" DefaultConstructor="createonly">
@@ -91,28 +92,33 @@
       <Parameters>
         <Parameter Identifier="Samples" Type="TMultiFrameAcquisitionInfo"/>
         <Parameter Identifier="Filename" Type="string"/>
-        <Parameter Identifier="Options" Type="TRawSamplesOptions"/>
+        <Parameter Identifier="Options" Type="TSaveRawSamplesOptions"/>
       </Parameters>
       <Block>
         <Variable Identifier="WriteMinValue" Type="Boolean" Init="False"/>
         <Variable Identifier="WriteMaxValue" Type="Boolean" Init="False"/>
         <Variable Identifier="WriteRawSum" Type="Boolean" Init="False"/>
         <Variable Identifier="LimitSamples" Type="UInt32" Init="0"/>
+        <Variable Identifier="Start" Type="Int32" Init="(Samples.Count + 1) div 4"/>
+        <Variable Identifier="Count" Type="Int32" Init="Samples.Count - (2 * Start)"/>
         <Block Condition="Assigned(Options)">
           <Execute Statement="WriteMinValue:= Options.WriteMinValue"/>
           <Execute Statement="WriteMaxValue:= Options.WriteMaxValue"/>
           <Execute Statement="WriteRawSum:= Options.WriteRawSum"/>
           <Execute Statement="LimitSamples:= Options.LimitSamples"/>
+          <Variable Identifier="MaxDiscardCountDiv2" Type="Int64" Init="(Samples.Count - 1) div 2"/>
+          <Variable Identifier="DiscardCountDiv2" Type="Int64" Init="(Samples.Count * Options.DiscardExtremesPercentage + 25) div 50"/>
+          <Execute Statement="DiscardCountDiv2:= MaxDiscardCountDiv2" Condition="DiscardCountDiv2 &gt; MaxDiscardCountDiv2"/>
+          <Execute Statement="Start:= DiscardCountDiv2"/>
+          <Execute Statement="Count:= Samples.Count - DiscardCountDiv2 * 2"/>
         </Block>
         <Variable Identifier="XmlDoc" Type="IXMLDomDocument"/>
         <Variable Identifier="RootE" Type="IXMLDomElement"/>
         <Variable Identifier="DataE" Type="IXMLDomElement"/>
         <Variable Identifier="PointE" Type="IXMLDomElement"/>
-        <Variable Identifier="Start" Type="Int32" Init="(Samples.Count + 1) div 4"/>
-        <Variable Identifier="Count" Type="Int32" Init="Samples.Count - (2 * Start)"/>
         <!--<Variable Identifier="Start" Type="Int32" Init="0"/>
         <Variable Identifier="Count" Type="Int32" Init="Samples.Count"/>-->
-        <rep:Reporter.Information Text="Format('Start: %d, Count: %d', Start, Count)"/>
+        <rep:Reporter.Information Text="Format('Start: %d, Count: %d', Start, Count)" Condition="IsVerbose"/>
         <Variable Identifier="VFactor" Type="Extended" Init="Samples.VFactor / Count"/>
         <Variable Identifier="VFactorSingle" Type="Extended" Init="Samples.VFactor"/>
         <Variable Identifier="VOffset" Type="Extended" Init="Samples.VOffset"/>
@@ -126,15 +132,19 @@
         <msx:Document.CreateElement Document="XmlDoc" Element="DataE" Name="Data" ParentElement="RootE"/>
         <msx:Element.SetAttribute Element="DataE" Name="Count" Value="Format('%d', Count)"/>
         <msx:Element.SetAttribute Element="DataE" Name="VFactor" Value="FloatTocode(Samples.VFactor)"/>
+        <!--<msx:Element.SetAttribute Element="DataE" Name="Time" Value="FloatTocode(Samples.Time)"/>
+        <msx:Element.SetAttribute Element="DataE" Name="TimePerSample" Value="FloatTocode(TimePerSample)"/>-->
+        <msx:Element.SetAttribute Element="DataE" Name="VUnit" Value="Samples.VUnit"/>
+        <msx:Element.SetAttribute Element="DataE" Name="ProbeAttenuation" Value="FloatTocode(Samples.ProbeAttenuation)"/>
+        <msx:Element.SetAttribute Element="DataE" Name="VDiv" Value="FloatTocode(Samples.VDiv)"/>
         <msx:Element.SetAttribute Element="DataE" Name="VOffset" Value="FloatTocode(Samples.VOffset)"/>
-        <msx:Element.SetAttribute Element="DataE" Name="Time" Value="FloatTocode(Samples.Time)"/>
-        <msx:Element.SetAttribute Element="DataE" Name="TimePerSample" Value="FloatTocode(TimePerSample)"/>
+        <msx:Element.SetAttribute Element="DataE" Name="HDiv" Value="FloatTocode(Samples.HDiv)"/>
+        <msx:Element.SetAttribute Element="DataE" Name="HOffset" Value="FloatTocode(Samples.HOffset)"/>
         <lil:LinkedList.Iterate Head="Samples.SamplePointManager.SampleHead" ItemType="TSamplePoint" RunningItem="Item" Next="Item.Next">
           <msx:Document.CreateElement Document="XmlDoc" Element="PointE" Name="P" ParentElement="DataE"/>
           <msx:Element.SetAttribute Element="PointE" Name="X" Value="FloatTocode(Time)"/>
           <Execute Statement="Value:= Item.GetSum(Start, Count)"/>
           <!--<rep:Reporter.Information Text="Format('Sum: %d', Value)"/>-->
-          <msx:Element.SetAttribute Element="PointE" Name="S" Value="Format('%d', Value)"/>
           <msx:Element.SetAttribute Element="PointE" Name="Y" Value="FloatTocode(VOffset + VFactor * Value)"/>
           <msx:Element.SetAttribute Element="PointE" Name="Y.min" Value="FloatTocode(VOffset + VFactorSingle * Item.MinValue)" Condition="WriteMinValue"/>
           <msx:Element.SetAttribute Element="PointE" Name="Y.max" Value="FloatTocode(VOffset + VFactorSingle * Item.MaxValue)" Condition="WriteMaxValue"/>

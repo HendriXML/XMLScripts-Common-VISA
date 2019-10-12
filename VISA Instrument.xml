@@ -39,6 +39,11 @@
       <Field Identifier="TimePerSample" Type="Extended"/>
       <Field Identifier="VFactor" Type="Extended"/>
       <Field Identifier="VOffset" Type="Extended"/>
+      <Field Identifier="VUnit" Type="AnsiChar"/>
+      <Field Identifier="ProbeAttenuation" Type="Extended"/>
+      <Field Identifier="VDiv" Type="Extended"/>
+      <Field Identifier="HDiv" Type="Extended"/>
+      <Field Identifier="HOffset" Type="Extended"/>
     </DataClass>
 
     <DataClass Identifier="TMultiFrameAcquisitionInfo" Inherit="TAcquisitionInfo">
