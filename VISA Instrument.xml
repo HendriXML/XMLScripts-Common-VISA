@@ -20,8 +20,7 @@
     <Enumeration Identifier="TVisaAttributeState" Elements="NoValue, ValidValue, InvalidValue, PendingChange"/>
     
     <DataClass Identifier="TVisaInstrument">
-      <Field Identifier="VisaSession" Type="IVisaSession"/>
-      <Field Identifier="Message" Type="IMessage"/>
+      <Field Identifier="VisaResource" Type="TVisaResource"/>
     </DataClass>
     
     <DataClass Identifier="TVisaAtrributeGroup" DefaultConstructor="none">
@@ -157,7 +156,7 @@
 
     <Function Identifier="CreateVisaSession" Type="IVisaSession">
       <Parameters>
-        <Parameter Identifier="ResourceName" Type="string"/>
+        <Parameter Identifier="ResourceName" Type="AnsiString"/>
       </Parameters>
       <Block>
         <Variable Identifier="ResourceManager" Type="IResourceManager3" Init="CoResourceManager.Create"/>
@@ -167,99 +166,63 @@
 
     <Constructor Identifier="TVISAInstrument.Create">
       <Parameters>
-        <Parameter Identifier="VisaSession" Type="IVisaSession"/>
+        <Parameter Identifier="VisaResource" Type="TVisaResource"/>
       </Parameters>
       <Block>
-        <Execute Statement="Self.VisaSession:= VisaSession" />
-        <Execute Statement="Message:= VisaSession as IMessage" />
-        <!--<Variable Identifier="IOProtocol"/>
-        <rep:Reporter.Information Text="'Get protocol'"/>
-        <Execute Statement="OleCheck(Message.Get_IOProtocol(IOProtocol))" />
-        <rep:Reporter.Information Text="Format('%d', IOProtocol)"/>-->
-        <!--<Execute Statement="OleCheck(Message.Set_TerminationCharacter(10))"/>
-        <Execute Statement="OleCheck(Message.Set_TerminationCharacterEnabled(True))"/>-->
+        <Execute Statement="Self.VisaResource:= VisaResource" />
       </Block>
     </Constructor>
 
     <Function Identifier="TVISAInstrument.ReadFloat" Type="Extended">
       <Block>
-        <Variable Identifier="readResult"/>
-        <Execute Statement="OleCheck(Message.ReadString(1000, readResult))"/>
-        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
-        <WhileLoop Expression="Length(readResult) &gt; 0">
-          <Break Condition="CharAt(readResult, Length(readResult)) &lt;&gt; #10"/>
-          <Execute Statement="readResult:= Copy(readResult, 1, Length(readResult) - 1)"/>
-        </WhileLoop>
-        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
+        <Variable Identifier="readResult" Type="AnsiString" Init="VisaResource.AnsiReadNoLF"/>
         <Execute Statement="Result:= CodeToFloat(readResult)"/>
       </Block>
     </Function>
 
     <Function Identifier="TVISAInstrument.ReadUInt32" Type="UInt32">
       <Block>
-        <Variable Identifier="readResult"/>
-        <Execute Statement="OleCheck(Message.ReadString(1000, readResult))"/>
-        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
-        <WhileLoop Expression="Length(readResult) &gt; 0">
-          <Break Condition="CharAt(readResult, Length(readResult)) &lt;&gt; #10"/>
-          <Execute Statement="readResult:= Copy(readResult, 1, Length(readResult) - 1)"/>
-        </WhileLoop>
-        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
+        <Variable Identifier="readResult" Type="AnsiString" Init="VisaResource.AnsiReadNoLF"/>
         <Execute Statement="Result:= StrToInt(readResult)"/>
       </Block>
     </Function>
 
     <Function Identifier="TVISAInstrument.QueryString">
       <Parameters>
-        <Parameter Identifier="Value" Type="string"/>
+        <Parameter Identifier="Value" Type="AnsiString"/>
       </Parameters>
       <Block>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString(Value, retCount))"/>
-        <Execute Statement="OleCheck(Message.ReadString(1000, Result))"/>
-        <!--<rep:Reporter.Information Text="Result" Condition="IsDebugging"/>-->
-        <WhileLoop Expression="Length(Result) &gt; 0">
-          <Break Condition="CharAt(Result, Length(Result)) &lt;&gt; #10"/>
-          <Execute Statement="Result:= Copy(Result, 1, Length(Result) - 1)"/>
-        </WhileLoop>
+        <Execute Statement="Result:= VisaResource.AnsiQueryNoLF(Value)"/>
       </Block>
     </Function>
 
-    <Function Identifier="TVISAInstrument.ReadString" Type="string">
+    <Function Identifier="TVISAInstrument.ReadString" Type="AnsiString">
       <Block>
-        <Execute Statement="OleCheck(Message.ReadString(1000, Result))"/>
-        <!--<rep:Reporter.Information Text="Result" Condition="IsDebugging"/>-->
-        <WhileLoop Expression="Length(Result) &gt; 0">
-          <Break Condition="CharAt(Result, Length(Result)) &lt;&gt; #10"/>
-          <Execute Statement="Result:= Copy(Result, 1, Length(Result) - 1)"/>
-        </WhileLoop>
+        <Execute Statement="Result:= VisaResource.AnsiReadNoLF"/>
       </Block>
     </Function>
 
     <Procedure Identifier="TVISAInstrument.WriteString">
       <Parameters>
-        <Parameter Identifier="Value" Type="string"/>
+        <Parameter Identifier="Value" Type="AnsiString"/>
       </Parameters>
       <Block>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString(Value, retCount))"/>
+        <Execute Statement="VisaResource.AnsiWrite(Value)"/>
       </Block>
     </Procedure>
     
     <Function Identifier="TVISAInstrument.ReadOnOff" Type="Boolean">
+      <Constants>
+        <Constant Identifier="sOn" Type="AnsiString" Expression="'ON'"/>
+        <Constant Identifier="sOff" Type="AnsiString" Expression="'OFF'"/>
+      </Constants>
       <Block>
-        <Variable Identifier="readResult"/>
-        <Execute Statement="OleCheck(Message.ReadString(1000, readResult))"/>
-        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
-        <WhileLoop Expression="Length(readResult) &gt; 0">
-          <Break Condition="CharAt(readResult, Length(readResult)) &lt;&gt; #10"/>
-          <Execute Statement="readResult:= Copy(readResult, 1, Length(readResult) - 1)"/>
-        </WhileLoop>
+        <Variable Identifier="readResult" Type="AnsiString" Init="VisaResource.AnsiReadNoLF"/>
         <Choose>
-          <When Expression="readResult = 'ON'">
+          <When Expression="readResult = sOn">
             <Execute Statement="Result:= True"/>
           </When>
-          <When Expression="readResult = 'OFF'">
+          <When Expression="readResult = sOff">
             <Execute Statement="Result:= False"/>
           </When>
           <Otherwise>
@@ -271,42 +234,55 @@
 
     <Procedure Identifier="TVISAInstrument.WriteOnOff">
       <Parameters>
-        <Parameter Identifier="Parameter" Type="string"/>
+        <Parameter Identifier="Parameter" Type="AnsiString"/>
         <Parameter Identifier="Value" Type="Boolean"/>
       </Parameters>
+      <Constants>
+        <Constant Identifier="sOn" Type="AnsiString" Expression="'ON'"/>
+        <Constant Identifier="sOff" Type="AnsiString" Expression="'OFF'"/>
+      </Constants>
       <Block>
-        <Variable Identifier="retCount"/>
-        <Variable Identifier="ValueS" Type="string" Init="IfElse(Value, 'ON', 'OFF')"/>
-        <Execute Statement="OleCheck(Message.WriteString(Format('%s %s', Parameter, ValueS), retCount))"/>
+        <Variable Identifier="ValueS" Type="AnsiString" Init="IfElse(Value, sOn, sOff)"/>
+        <Execute Statement="VisaResource.AnsiWrite(AnsiFormat('%s %s', Parameter, ValueS))"/>
       </Block>
     </Procedure>
 
     <Function Identifier="TVISAInstrument.ReadInt64" Type="Int64">
       <Block>
-        <Variable Identifier="readResult"/>
-        <Execute Statement="OleCheck(Message.ReadString(1000, readResult))"/>
-        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
-        <WhileLoop Expression="Length(readResult) &gt; 0">
-          <Break Condition="CharAt(readResult, Length(readResult)) &lt;&gt; #10"/>
-          <Execute Statement="readResult:= Copy(readResult, 1, Length(readResult) - 1)"/>
-        </WhileLoop>
-        <!--<rep:Reporter.Information Text="readResult" Condition="IsDebugging"/>-->
-        <Execute Statement="Result:= StrToInt(readResult)"/>
+        <Variable Identifier="readResult" Type="AnsiString" Init="VisaResource.AnsiReadNoLF"/>
+        <Execute Statement="Result:= StrToInt64(readResult)"/>
       </Block>
     </Function>
 
-    <Procedure Identifier="TVISAInstrument.WriteInt64">
+    <Function Identifier="TVISAInstrument.ReadBlob" Type="TMemoryStream">
       <Parameters>
-        <Parameter Identifier="Parameter" Type="string"/>
-        <Parameter Identifier="Value" Type="Int64"/>
+        <Parameter Identifier="BufSize" Type="UInt32"/>
       </Parameters>
       <Block>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString(Format('%s %d', Parameter, Value), retCount))"/>
+        <Execute Statement="Result:= VisaResource.ReadBlob(BufSize)"/>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TVISAInstrument.WriteBlob">
+      <Parameters>
+        <Parameter Identifier="Blob" Type="TStream"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="VisaResource.WriteBlob(Blob)"/>
       </Block>
     </Procedure>
 
-    <Property Identifier="TVISAInstrument.IDN" Type="string" >
+    <Procedure Identifier="TVISAInstrument.WriteInt64">
+      <Parameters>
+        <Parameter Identifier="Parameter" Type="AnsiString"/>
+        <Parameter Identifier="Value" Type="Int64"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="VisaResource.AnsiWrite(AnsiFormat('%s %d', Parameter, Value))"/>
+      </Block>
+    </Procedure>
+
+    <Property Identifier="TVISAInstrument.IDN" Type="AnsiString" >
       <Getter>
         <Execute Statement="Result:= QueryString('*IDN?')"/>
       </Getter>
@@ -317,16 +293,24 @@
         <Parameter Identifier="Timeout" Type="Int32"/>
       </Parameters>
       <Block>
-        <Variable Identifier="AccessKey"/>
-        <Execute Statement="OleCheck(VisaSession.LockRsrc(TAccessMode.EXCLUSIVE_LOCK, Timeout, '', AccessKey))"/>
+        <Execute Statement="VisaResource.ExclusiveLock(Timeout)"/>
       </Block>
     </Procedure>
 
     <Procedure Identifier="TVISAInstrument.UnLock">
       <Block>
-        <Execute Statement="OleCheck(VisaSession.UnlockRsrc)"/>
+        <Execute Statement="VisaResource.UnLock"/>
       </Block>
     </Procedure>
+
+    <Property Identifier="TVISAInstrument.Timeout" Type="UInt32">
+      <Getter>
+        <Execute Statement="Result:= VisaResource.Timeout"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="VisaResource.Timeout:= Value"/>
+      </Setter>
+    </Property>
     
 
 

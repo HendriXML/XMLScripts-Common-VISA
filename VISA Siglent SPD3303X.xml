@@ -39,13 +39,12 @@
 
     <Property Identifier="TSiglentSPD3303X.Voltage" Type="Extended">
       <Parameters>
-        <Parameter Identifier="Channel" Type="Int32"/>
+        <Parameter Identifier="Channel" Type="TSPD3303XChannel"/>
       </Parameters>
       <Getter>
-        <Variable Identifier="retCount"/>
         <Case Expression="Channel">
-          <On Select="1, 2">
-            <Execute Statement="OleCheck(Message.WriteString(Format('CH%d:VOLTage?', Channel), retCount))"/>
+          <On Select="TSPD3303XChannel.CH1, TSPD3303XChannel.CH2">
+            <Execute Statement="WriteString(Format('CH%d:VOLTage?', Channel))"/>
             <Execute Statement="Result:= ReadFloat"/>
           </On>
           <Otherwise>
@@ -54,10 +53,9 @@
         </Case>
       </Getter>
       <Setter>
-        <Variable Identifier="retCount"/>
         <Case Expression="Channel">
-          <On Select="1, 2">
-            <Execute Statement="OleCheck(Message.WriteString(Format('CH%d:VOLTage %s', Channel, FloatToCode(Value)), retCount))"/>
+          <On Select="TSPD3303XChannel.CH1, TSPD3303XChannel.CH2">
+            <Execute Statement="WriteString(Format('CH%d:VOLTage %s', Channel, FloatToCode(Value)))"/>
           </On>
           <Otherwise>
             <Execute Statement="RaiseInvalidChannel"/>
@@ -68,13 +66,12 @@
 
     <Property Identifier="TSiglentSPD3303X.Current" Type="Extended">
       <Parameters>
-        <Parameter Identifier="Channel" Type="Int32"/>
+        <Parameter Identifier="Channel" Type="TSPD3303XChannel"/>
       </Parameters>
       <Getter>
-        <Variable Identifier="retCount"/>
         <Case Expression="Channel">
-          <On Select="1, 2">
-            <Execute Statement="OleCheck(Message.WriteString(Format('CH%d:CURRent?', Channel), retCount))"/>
+          <On Select="TSPD3303XChannel.CH1, TSPD3303XChannel.CH2">
+            <Execute Statement="WriteString(Format('CH%d:CURRent?', Channel))"/>
             <Execute Statement="Result:= ReadFloat"/>
           </On>
           <Otherwise>
@@ -83,10 +80,9 @@
         </Case>
       </Getter>
       <Setter>
-        <Variable Identifier="retCount"/>
         <Case Expression="Channel">
-          <On Select="1, 2">
-            <Execute Statement="OleCheck(Message.WriteString(Format('CH%d:CURRent %s', Channel, FloatToCode(Value)), retCount))"/>
+          <On Select="TSPD3303XChannel.CH1, TSPD3303XChannel.CH2">
+            <Execute Statement="WriteString(Format('CH%d:CURRent %s', Channel, FloatToCode(Value)))"/>
           </On>
           <Otherwise>
             <Execute Statement="RaiseInvalidChannel"/>
@@ -97,13 +93,12 @@
 
     <Property Identifier="TSiglentSPD3303X.ActualCurrent" Type="Extended">
       <Parameters>
-        <Parameter Identifier="Channel" Type="Int32"/>
+        <Parameter Identifier="Channel" Type="TSPD3303XChannel"/>
       </Parameters>
       <Getter>
-        <Variable Identifier="retCount"/>
         <Case Expression="Channel">
-          <On Select="1, 2">
-            <Execute Statement="OleCheck(Message.WriteString(Format('MEASure:CURRent? CH%d', Channel), retCount))"/>
+          <On Select="TSPD3303XChannel.CH1, TSPD3303XChannel.CH2">
+            <Execute Statement="WriteString(Format('MEASure:CURRent? CH%d', Channel))"/>
             <Execute Statement="Result:= ReadFloat"/>
           </On>
           <Otherwise>
@@ -115,13 +110,12 @@
 
     <Property Identifier="TSiglentSPD3303X.ActualVoltage" Type="Extended">
       <Parameters>
-        <Parameter Identifier="Channel" Type="Int32"/>
+        <Parameter Identifier="Channel" Type="TSPD3303XChannel"/>
       </Parameters>
       <Getter>
-        <Variable Identifier="retCount"/>
         <Case Expression="Channel">
-          <On Select="1, 2">
-            <Execute Statement="OleCheck(Message.WriteString(Format('MEASure:VOLTage? CH%d', Channel), retCount))"/>
+          <On Select="TSPD3303XChannel.CH1, TSPD3303XChannel.CH2">
+            <Execute Statement="WriteString(Format('MEASure:VOLTage? CH%d', Channel))"/>
             <Execute Statement="Result:= ReadFloat"/>
           </On>
           <Otherwise>
@@ -133,16 +127,15 @@
 
     <Function Identifier="TSiglentSPD3303X.WaitForStabilizedVoltage">
       <Parameters>
-        <Parameter Identifier="Channel" Type="Int32"/>
+        <Parameter Identifier="Channel" Type="TSPD3303XChannel"/>
         <Parameter Identifier="DiffTime" Type="Integer"/>
         <Parameter Identifier="Difference" Type="Extended"/>
       </Parameters>
       <Block>
-        <Variable Identifier="retCount"/>
         <Variable Identifier="PreWaitVoltage" Type="Extended"/>
         <Variable Identifier="SPCICommand" Type="string"/>
         <Case Expression="Channel">
-          <On Select="1, 2">
+          <On Select="TSPD3303XChannel.CH1, TSPD3303XChannel.CH2">
             <Execute Statement="SPCICommand:= Format('MEASure:VOLTage? CH%d', Channel)"/>
           </On>
           <Otherwise>
@@ -151,10 +144,10 @@
         </Case>
         <RepeatUntilLoop Expression="Abs(PreWaitVoltage - Result) &lt; Difference">
           <ExitOnAbortRequest/>
-          <Execute Statement="OleCheck(Message.WriteString(SPCICommand, retCount))"/>
+          <Execute Statement="WriteString(SPCICommand)"/>
           <Execute Statement="PreWaitVoltage:= ReadFloat"/>
           <sim:Wait Time="DiffTime"/>
-          <Execute Statement="OleCheck(Message.WriteString(SPCICommand, retCount))"/>
+          <Execute Statement="WriteString(SPCICommand)"/>
           <Execute Statement="Result:= ReadFloat"/>
         </RepeatUntilLoop>
       </Block>
@@ -162,13 +155,12 @@
 
     <Property Identifier="TSiglentSPD3303X.Enabled" Type="Boolean">
       <Parameters>
-        <Parameter Identifier="Channel" Type="Int32"/>
+        <Parameter Identifier="Channel" Type="TSPD3303XChannel"/>
       </Parameters>
       <Getter>
-        <Variable Identifier="retCount"/>
         <Case Expression="Channel">
-          <On Select="0, 1, 2">
-            <Execute Statement="OleCheck(Message.WriteString(Format('CH%d:OUTPut?', Channel), retCount))"/>
+          <On Select="TSPD3303XChannel.CH1, TSPD3303XChannel.CH2, TSPD3303XChannel.CH3">
+            <Execute Statement="WriteString(Format('CH%d:OUTPut?', Channel))"/>
             <Execute Statement="Result:= ReadOnOff"/>
           </On>
           <Otherwise>
@@ -177,11 +169,10 @@
         </Case>
       </Getter>
       <Setter>
-        <Variable Identifier="retCount"/>
         <Case Expression="Channel">
-          <On Select="1, 2, 3">
+          <On Select="TSPD3303XChannel.CH1, TSPD3303XChannel.CH2, TSPD3303XChannel.CH3">
             <Variable Identifier="ValueS" Type="string" Init="IfElse(Value, 'ON', 'OFF')"/>
-            <Execute Statement="OleCheck(Message.WriteString(Format('OUTPut CH%d,%s', Channel, ValueS), retCount))"/>
+            <Execute Statement="WriteString(Format('OUTPut CH%d,%s', Channel, ValueS))"/>
           </On>
           <Otherwise>
             <Execute Statement="RaiseInvalidChannel"/>

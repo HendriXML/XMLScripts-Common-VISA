@@ -91,10 +91,10 @@
 
     <Constructor Identifier="TSiglentSDG1000X.Create">
       <Parameters>
-        <Parameter Identifier="VisaSession" Type="IVisaSession"/>
+        <Parameter Identifier="VisaResource" Type="TVisaResource"/>
       </Parameters>
       <Block>
-        <Execute Statement="inherited Create(VisaSession)" />
+        <Execute Statement="inherited Create(VisaResource)" />
         <Execute Statement="BasicWave1:= TSiglentSDG1000XBasicWave.Create(Self, TSiglentSDG1000XBasicWaveKind.Ch1)"/>
         <Execute Statement="BasicWave2:= TSiglentSDG1000XBasicWave.Create(Self, TSiglentSDG1000XBasicWaveKind.Ch2)"/>
       </Block>

@@ -75,10 +75,10 @@
     <DataClass Identifier="TAcquisitionOptions">
       <Field Identifier="LimitSamples" Type="UInt32"/>
     </DataClass>
-    
+
     <DataClass Identifier="TMultiFrameAcquisitionOptions" Inherit="TAcquisitionOptions">
     </DataClass>
-    
+
     <DataClass Identifier="TSingleSummedSampleAcquisitionOptions" Inherit="TAcquisitionOptions">
     </DataClass>
   </Type>
@@ -473,7 +473,7 @@
         <Execute Statement="WriteString(ChannelID[Channel] + ':TRIG_LEVEL ' + FloatToCode(Value))"/>
       </Block>
     </Procedure>
-    
+
     <Property Identifier="TSiglentSDS1104X.Attenuation" Type="Extended">
       <Parameters>
         <Parameter Identifier="Channel" Type="TChannelType"/>
@@ -512,8 +512,7 @@
         <Parameter Identifier="HWTraceType" Type="THWTraceType"/>
       </Parameters>
       <Getter>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString(Format('%s:TRA?', HWTraceID[HWTraceType]), retCount))"/>
+        <Execute Statement="WriteString(Format('%s:TRA?', HWTraceID[HWTraceType]))"/>
         <Execute Statement="Result:= ReadOnOff"/>
       </Getter>
       <Setter>
@@ -523,8 +522,7 @@
 
     <Property Identifier="TSiglentSDS1104X.HistoryMode" Type="Boolean">
       <Getter>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString('HISTORY_MODE', retCount))"/>
+        <Execute Statement="WriteString('HISTORY_MODE')"/>
         <Execute Statement="Result:= ReadOnOff"/>
       </Getter>
       <Setter>
@@ -534,8 +532,7 @@
 
     <Property Identifier="TSiglentSDS1104X.SequenceMode" Type="Boolean">
       <Getter>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString('ACquire_SeQuence_Mode', retCount))"/>
+        <Execute Statement="WriteString('ACquire_SeQuence_Mode')"/>
         <Execute Statement="Result:= ReadOnOff"/>
       </Getter>
       <Setter>
@@ -616,44 +613,29 @@
       </Setter>
     </Property>
 
-    <Function Identifier="TSiglentSDS1104X.ScreenCapure" Type="Pointer">
-      <Block>
-        <Execute Statement="WriteString('SCDP')"/>
-        <Execute Statement="OleCheck(Message.Read(1000000, Result))"/>
-      </Block>
-    </Function>
-
     <Procedure Identifier="TSiglentSDS1104X.ScreenCapureToFile">
       <Parameters>
         <Parameter Identifier="Filename" Type="string"/>
         <Parameter Identifier="ImageType" Type="TImageType"/>
       </Parameters>
       <Block>
-        <Variable Identifier="BMPData" Init="ScreenCapure"/>
-        <TryFinally>
-          <Try>
-            <Object.Use Identifier="SafeArrayStream" Type="TSafeArrayStream" Expression="TSafeArrayStream.Create">
-              <Raise Condition="not SafeArrayStream.SetSafeArray(BMPData)" Expression="Exception.Create(sErrorGettingScreenCapture)"/>
-              <Case Expression="ImageType">
-                <On Select="TImageType.BMP">
-                  <Execute Statement="SafeArrayStream.SaveToFile(Filename)"/>
-                </On>
-                <On Select="TImageType.PNG">
-                  <Object.Use Identifier="BMPObj" Type="TBitmap" Expression="TBitmap.Create">
-                    <Execute Statement="BMPObj.LoadFromStream(SafeArrayStream)"/>
-                    <Object.Use Identifier="PNGObj" Type="TPngImage" Expression="TPngImage.Create">
-                      <Execute Statement="PNGObj.Assign(BMPObj)"/>
-                      <Execute Statement="PNGObj.SaveToFile(Filename)"/>
-                    </Object.Use>
-                  </Object.Use>
-                </On>
-              </Case>
-            </Object.Use>
-          </Try>
-          <Finally>
-            <Execute Statement="OleCheck(SafeArrayDestroy(BMPData))"/>
-          </Finally>
-        </TryFinally>
+        <Execute Statement="WriteString('SCDP')"/>
+        <Object.Use Identifier="BlobStream" Type="TMemoryStream" Expression="ReadBlob(1000000)">
+          <Case Expression="ImageType">
+            <On Select="TImageType.BMP">
+              <Execute Statement="BlobStream.SaveToFile(Filename)"/>
+            </On>
+            <On Select="TImageType.PNG">
+              <Object.Use Identifier="BMPObj" Type="TBitmap" Expression="TBitmap.Create">
+                <Execute Statement="BMPObj.LoadFromStream(BlobStream)"/>
+                <Object.Use Identifier="PNGObj" Type="TPngImage" Expression="TPngImage.Create">
+                  <Execute Statement="PNGObj.Assign(BMPObj)"/>
+                  <Execute Statement="PNGObj.SaveToFile(Filename)"/>
+                </Object.Use>
+              </Object.Use>
+            </On>
+          </Case>
+        </Object.Use>
       </Block>
     </Procedure>
 
@@ -663,24 +645,14 @@
         <Parameter Identifier="Wave" Type="string"/>
       </Parameters>
       <Block>
-        <Variable Identifier="WaveData"/>
         <Execute Statement="WriteString('WVDT? ' + Wave)"/>
-        <Execute Statement="OleCheck(Message.Read(1000000, WaveData))"/>
-        <TryFinally>
-          <Try>
-            <Object.Use Identifier="SafeArrayStream" Type="TSafeArrayStream" Expression="TSafeArrayStream.Create">
-              <Raise Condition="not SafeArrayStream.SetSafeArray(WaveData)" Expression="Exception.Create(sErrorGettingAWGWaveData)"/>
-              <Execute Statement="SafeArrayStream.SaveToFile(Filename)"/>
-            </Object.Use>
-          </Try>
-          <Finally>
-            <Execute Statement="OleCheck(SafeArrayDestroy(WaveData))"/>
-          </Finally>
-        </TryFinally>
+        <Object.Use Identifier="BlobStream" Type="TMemoryStream" Expression="ReadBlob(1000000)">
+          <Execute Statement="BlobStream.SaveToFile(Filename)"/>
+        </Object.Use>
       </Block>
     </Procedure>
 
-    <Function Identifier="TSiglentSDS1104X.WaveForm" Type="Pointer">
+    <Function Identifier="TSiglentSDS1104X.WaveForm" Type="TMemoryStream">
       <Parameters>
         <Parameter Identifier="Trace" Type="TTraceType"/>
       </Parameters>
@@ -688,8 +660,8 @@
         <!--<Execute Statement="WriteString(TraceID + ':WF? ALL')"/>-->
         <Execute Statement="WriteString(TraceID[Trace] + ':WF? DAT2')"/>
         <!--<Execute Statement="WriteString(TraceID[Trace] + ':WF? ALL')"/>-->
-        <Execute Statement="OleCheck(Message.Set_Timeout(10000))"/>
-        <Execute Statement="OleCheck(Message.Read(100000000, Result))"/>
+        <Execute Statement="Timeout:= 10000"/>
+        <Execute Statement="Result:= ReadBlob(1000000)"/>
       </Block>
     </Function>
 
@@ -713,7 +685,7 @@
       </Block>
     </Procedure>
 
-    <Function Identifier="TSiglentSDS1104X.WaveForm" Type="Pointer">
+    <Function Identifier="TSiglentSDS1104X.WaveForm" Type="TMemoryStream">
       <Parameters>
         <Parameter Identifier="Trace" Type="TTraceType"/>
         <Parameter Identifier="Segment" Type="Integer"/>
@@ -735,8 +707,8 @@
             <Raise Expression="Exception.Create(sErrorWaveFormFormat)"/>
           </Otherwise>
         </Case>
-        <Execute Statement="OleCheck(Message.Set_Timeout(10000))"/>
-        <Execute Statement="OleCheck(Message.Read(100000000, Result))"/>
+        <Execute Statement="Timeout:= 10000"/>
+        <Execute Statement="Result:= ReadBlob(100000000)"/>
       </Block>
     </Function>
 
@@ -821,209 +793,200 @@
       </Variables>
       <Block>
         <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
-        <Variable Identifier="RawDataArray" Init="WaveForm(Trace, 0, TWaveFormFormat.All)"/>
-        <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
-        <TryFinally>
-          <Try>
-            <Object.Use Identifier="Stream" Type="TSafeArrayStream" Expression="TSafeArrayStream.Create">
-              <Raise Condition="not Stream.SetSafeArray(RawDataArray)" Expression="Exception.Create(sErrorGettingWaveData)"/>
-              <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', Stream.Size, (EndTime-StartTime)/QueryPerformanceFrequency, Stream.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Condition="IsVerbose"/>
-              <msx:Document.Create Identifier="XmlDoc"/>
-              <msx:Document.CreateElement Document="XmlDoc" Element="RootE" Name="WaveForm" ParentElement="XmlDoc"/>
-              <msx:Element.SetAttribute Element="RootE" Name="xmlns:xsi" Value="'http://www.w3.org/2001/XMLSchema-instance'"/>
-              <msx:Element.SetAttribute Element="RootE" Name="xsi:noNamespaceSchemaLocation" Namespace="http://www.w3.org/2001/XMLSchema-instance" Value="'WaveForm.xsd'"/>
-              <msx:Document.CreateElement Document="XmlDoc" Element="DataE" Name="Data" ParentElement="RootE"/>
-              <rep:Reporter.Information Text="Format('Stream.Size: %d', Stream.Size)" Condition="IsVerbose"/>
-              <stm:StateHandler InitialState="SearchDash">
-                <ForLoop Indexer="I" From="0" To="Stream.Size - 1">
-                  <stm:HandleStates>
-                    <stm:State Name="Start">
-                      <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
-                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
-                        <On Select="'A'..'Z'">
-                          <Execute Statement="TraceS:= AnsiData"/>
-                          <stm:SetState Name="InTrace" />
-                        </On>
-                        <Otherwise>
-                          <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
-                        </Otherwise>
-                      </Case>
-                    </stm:State>
-                    <stm:State Name="InTrace">
-                      <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
-                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
-                        <On Select="'A'..'Z', '0'..'9'">
-                          <Execute Statement="TraceS:= TraceS + AnsiData"/>
-                        </On>
-                        <On Select="':'">
-                          <!--<rep:Reporter.Information Text="Format('Trace: %s', TraceS)" Condition="IsVerbose"/>-->
-                          <stm:SetState Name="SearchDash" />
-                        </On>
-                        <Otherwise>
-                          <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
-                        </Otherwise>
-                      </Case>
-                    </stm:State>
-                    <stm:State Name="SearchDash">
-                      <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
-                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
-                        <On Select="'#'">
-                          <stm:SetState Name="SearchNine" />
-                        </On>
-                      </Case>
-                    </stm:State>
-                    <stm:State Name="SearchNine">
-                      <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
-                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
-                        <On Select="'9'">
-                          <stm:SetState Name="InSucceedingBlockSize" />
-                          <Execute Statement="BlockSizeCount:= 0"/>
-                          <Execute Statement="BlockSize:= 0"/>
-                        </On>
-                      </Case>
-                    </stm:State>
-                    <stm:State Name="InSucceedingBlockSize">
-                      <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingWaveLength)"/>
-                      <Execute Statement="BlockSizeCount:= BlockSizeCount + 1"/>
-                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
-                        <On Select="'0'..'9'">
-                          <Execute Statement="BlockSize:= BlockSize * 10 + (CharOrd(AnsiData) - ordC0)"/>
-                        </On>
-                        <Otherwise>
-                          <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
-                        </Otherwise>
-                      </Case>
-                      <Block Condition="BlockSizeCount = 9">
-                        <Execute Statement="BlockStart:= Stream.Position"/>
+        <Object.Use Identifier="Stream" Type="TStream" Expression="WaveForm(Trace, 0, TWaveFormFormat.All)">
+          <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
+          <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', Stream.Size, (EndTime-StartTime)/QueryPerformanceFrequency, Stream.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Condition="IsVerbose"/>
+          <msx:Document.Create Identifier="XmlDoc"/>
+          <msx:Document.CreateElement Document="XmlDoc" Element="RootE" Name="WaveForm" ParentElement="XmlDoc"/>
+          <msx:Element.SetAttribute Element="RootE" Name="xmlns:xsi" Value="'http://www.w3.org/2001/XMLSchema-instance'"/>
+          <msx:Element.SetAttribute Element="RootE" Name="xsi:noNamespaceSchemaLocation" Namespace="http://www.w3.org/2001/XMLSchema-instance" Value="'WaveForm.xsd'"/>
+          <msx:Document.CreateElement Document="XmlDoc" Element="DataE" Name="Data" ParentElement="RootE"/>
+          <rep:Reporter.Information Text="Format('Stream.Size: %d', Stream.Size)" Condition="IsVerbose"/>
+          <stm:StateHandler InitialState="SearchDash">
+            <ForLoop Indexer="I" From="0" To="Stream.Size - 1">
+              <stm:HandleStates>
+                <stm:State Name="Start">
+                  <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                  <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                    <On Select="'A'..'Z'">
+                      <Execute Statement="TraceS:= AnsiData"/>
+                      <stm:SetState Name="InTrace" />
+                    </On>
+                    <Otherwise>
+                      <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
+                    </Otherwise>
+                  </Case>
+                </stm:State>
+                <stm:State Name="InTrace">
+                  <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                  <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                    <On Select="'A'..'Z', '0'..'9'">
+                      <Execute Statement="TraceS:= TraceS + AnsiData"/>
+                    </On>
+                    <On Select="':'">
+                      <!--<rep:Reporter.Information Text="Format('Trace: %s', TraceS)" Condition="IsVerbose"/>-->
+                      <stm:SetState Name="SearchDash" />
+                    </On>
+                    <Otherwise>
+                      <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
+                    </Otherwise>
+                  </Case>
+                </stm:State>
+                <stm:State Name="SearchDash">
+                  <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                  <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                    <On Select="'#'">
+                      <stm:SetState Name="SearchNine" />
+                    </On>
+                  </Case>
+                </stm:State>
+                <stm:State Name="SearchNine">
+                  <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
+                  <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                    <On Select="'9'">
+                      <stm:SetState Name="InSucceedingBlockSize" />
+                      <Execute Statement="BlockSizeCount:= 0"/>
+                      <Execute Statement="BlockSize:= 0"/>
+                    </On>
+                  </Case>
+                </stm:State>
+                <stm:State Name="InSucceedingBlockSize">
+                  <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingWaveLength)"/>
+                  <Execute Statement="BlockSizeCount:= BlockSizeCount + 1"/>
+                  <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
+                    <On Select="'0'..'9'">
+                      <Execute Statement="BlockSize:= BlockSize * 10 + (CharOrd(AnsiData) - ordC0)"/>
+                    </On>
+                    <Otherwise>
+                      <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
+                    </Otherwise>
+                  </Case>
+                  <Block Condition="BlockSizeCount = 9">
+                    <Execute Statement="BlockStart:= Stream.Position"/>
 
-                        <Execute Statement="Stream.Position:= BlockStart + coDescriptionBlockSizeOffset"/>
-                        <Raise Condition="Stream.ReadDataUInt16(DescriptionBlockSize) &lt;&gt; 2" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('DescriptionBlockSize: %d', DescriptionBlockSize)" Condition="IsVerbose"/>
+                    <Execute Statement="Stream.Position:= BlockStart + coDescriptionBlockSizeOffset"/>
+                    <Raise Condition="Stream.ReadDataUInt16(DescriptionBlockSize) &lt;&gt; 2" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('DescriptionBlockSize: %d', DescriptionBlockSize)" Condition="IsVerbose"/>
 
-                        <rep:Reporter.Information Text="Format('BlockStart: %d', BlockStart)" Condition="IsVerbose"/>
+                    <rep:Reporter.Information Text="Format('BlockStart: %d', BlockStart)" Condition="IsVerbose"/>
 
 
-                        <Execute Statement="Stream.Position:= BlockStart + coNumberOfPointsOffset"/>
-                        <Raise Condition="Stream.ReadDataUInt32(NumberOfPoints) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('Nr. of points: %d', NumberOfPoints)" Condition="IsVerbose"/>
-                        
-
-                        <Execute Statement="Stream.Position:= BlockStart + coWaveSizeOffset"/>
-                        <Raise Condition="Stream.ReadDataUInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('WaveSize: %d', UInt32Data)" Condition="IsVerbose"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coPointsPerScreen"/>
-                        <Raise Condition="Stream.ReadDataInt32(PointsPerScreen) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('PointsPerScreen: %d', PointsPerScreen)" Condition="IsVerbose"/>
-                        <!--<msx:Element.SetAttribute Element="DataE" Name="VUnit" Value="PointsPerScreen"/>-->
-
-                        <Execute Statement="Stream.Position:= BlockStart + coFirstValidPntOffset"/>
-                        <Raise Condition="Stream.ReadDataInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('FirstValidPnt: %d', UInt32Data)" Condition="IsVerbose"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coLastValidPntOffset"/>
-                        <Raise Condition="Stream.ReadDataInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('LastValidPnt: %d', UInt32Data)" Condition="IsVerbose"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coVUnitOffset"/>
-                        <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('VUnit: %s', AnsiData)" Condition="IsVerbose"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="VUnit" Value="AnsiData"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coProbeAttenuationOffset"/>
-                        <Raise Condition="Stream.ReadDataSingle(ProbeAttenuation) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('ProbeAttenuation: %g', ProbeAttenuation)" Condition="IsVerbose"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="ProbeAttenuation" Value="FloatToCode(ProbeAttenuation)"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coVerticalGainOffset"/>
-                        <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('VerticalGain: %g', FloatValue)" Condition="IsVerbose"/>
-                        <Execute Statement="FloatValue:= FloatValue * ProbeAttenuation"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="VDiv" Value="FloatToCode(FloatValue)"/>
-                        <Execute Statement="VFactor:= FloatValue * cVGran"/>
+                    <Execute Statement="Stream.Position:= BlockStart + coNumberOfPointsOffset"/>
+                    <Raise Condition="Stream.ReadDataUInt32(NumberOfPoints) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('Nr. of points: %d', NumberOfPoints)" Condition="IsVerbose"/>
 
 
-                        <Execute Statement="Stream.Position:= BlockStart + coVerticalOffsetOffset"/>
-                        <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('VerticalOffset: %g', FloatValue)" Condition="IsVerbose"/>
-                        <Execute Statement="FloatValue:= FloatValue * ProbeAttenuation"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="VOffset" Value="FloatToCode(FloatValue)"/>
-                        <Execute Statement="VOffset:= -FloatValue"/>
+                    <Execute Statement="Stream.Position:= BlockStart + coWaveSizeOffset"/>
+                    <Raise Condition="Stream.ReadDataUInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('WaveSize: %d', UInt32Data)" Condition="IsVerbose"/>
 
-                        <Execute Statement="Stream.Position:= BlockStart + coHorizontalIntervalOffset"/>
-                        <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('HorizontalInterval: %g', FloatValue)" Condition="IsVerbose"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="HDiv" Value="FloatToCode(FloatValue * PointsPerScreen / cHDivisions)"/>
-                        <Execute Statement="TimePerSample:= FloatValue"/>
+                    <Execute Statement="Stream.Position:= BlockStart + coPointsPerScreen"/>
+                    <Raise Condition="Stream.ReadDataInt32(PointsPerScreen) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('PointsPerScreen: %d', PointsPerScreen)" Condition="IsVerbose"/>
+                    <!--<msx:Element.SetAttribute Element="DataE" Name="VUnit" Value="PointsPerScreen"/>-->
 
-                        <Execute Statement="Stream.Position:= BlockStart + coHorizontalOffsetOffset"/>
-                        <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('HorizontalOffset: %g', FloatValue)" Condition="IsVerbose"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="HOffset" Value="FloatToCode(FloatValue)"/>
-                        <Execute Statement="Time:= FloatValue - NumberOfPoints * TimePerSample * 0.5"/>
+                    <Execute Statement="Stream.Position:= BlockStart + coFirstValidPntOffset"/>
+                    <Raise Condition="Stream.ReadDataInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('FirstValidPnt: %d', UInt32Data)" Condition="IsVerbose"/>
 
-                        <!--<Execute Statement="Stream.Position:= BlockStart + coSegmentIndexOffset"/>
+                    <Execute Statement="Stream.Position:= BlockStart + coLastValidPntOffset"/>
+                    <Raise Condition="Stream.ReadDataInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('LastValidPnt: %d', UInt32Data)" Condition="IsVerbose"/>
+
+                    <Execute Statement="Stream.Position:= BlockStart + coVUnitOffset"/>
+                    <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('VUnit: %s', AnsiData)" Condition="IsVerbose"/>
+                    <msx:Element.SetAttribute Element="DataE" Name="VUnit" Value="AnsiData"/>
+
+                    <Execute Statement="Stream.Position:= BlockStart + coProbeAttenuationOffset"/>
+                    <Raise Condition="Stream.ReadDataSingle(ProbeAttenuation) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('ProbeAttenuation: %g', ProbeAttenuation)" Condition="IsVerbose"/>
+                    <msx:Element.SetAttribute Element="DataE" Name="ProbeAttenuation" Value="FloatToCode(ProbeAttenuation)"/>
+
+                    <Execute Statement="Stream.Position:= BlockStart + coVerticalGainOffset"/>
+                    <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('VerticalGain: %g', FloatValue)" Condition="IsVerbose"/>
+                    <Execute Statement="FloatValue:= FloatValue * ProbeAttenuation"/>
+                    <msx:Element.SetAttribute Element="DataE" Name="VDiv" Value="FloatToCode(FloatValue)"/>
+                    <Execute Statement="VFactor:= FloatValue * cVGran"/>
+
+
+                    <Execute Statement="Stream.Position:= BlockStart + coVerticalOffsetOffset"/>
+                    <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('VerticalOffset: %g', FloatValue)" Condition="IsVerbose"/>
+                    <Execute Statement="FloatValue:= FloatValue * ProbeAttenuation"/>
+                    <msx:Element.SetAttribute Element="DataE" Name="VOffset" Value="FloatToCode(FloatValue)"/>
+                    <Execute Statement="VOffset:= -FloatValue"/>
+
+                    <Execute Statement="Stream.Position:= BlockStart + coHorizontalIntervalOffset"/>
+                    <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('HorizontalInterval: %g', FloatValue)" Condition="IsVerbose"/>
+                    <msx:Element.SetAttribute Element="DataE" Name="HDiv" Value="FloatToCode(FloatValue * PointsPerScreen / cHDivisions)"/>
+                    <Execute Statement="TimePerSample:= FloatValue"/>
+
+                    <Execute Statement="Stream.Position:= BlockStart + coHorizontalOffsetOffset"/>
+                    <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('HorizontalOffset: %g', FloatValue)" Condition="IsVerbose"/>
+                    <msx:Element.SetAttribute Element="DataE" Name="HOffset" Value="FloatToCode(FloatValue)"/>
+                    <Execute Statement="Time:= FloatValue - NumberOfPoints * TimePerSample * 0.5"/>
+
+                    <!--<Execute Statement="Stream.Position:= BlockStart + coSegmentIndexOffset"/>
                         <Raise Condition="Stream.ReadDataInt32(Int32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
                         <rep:Reporter.Information Text="Format('SegmentIndex: %d', Int32Data)" Condition="IsVerbose"/>-->
 
-                        <Execute Statement="Stream.Position:= BlockStart + coNominalBitsOffset"/>
-                        <Raise Condition="Stream.ReadDataUInt16(UInt32Data) &lt;&gt; 2" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('NominalBits: %d', UInt32Data)" Condition="IsVerbose"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="NominalBits" Value="IntToStr(UInt32Data)"/>
+                    <Execute Statement="Stream.Position:= BlockStart + coNominalBitsOffset"/>
+                    <Raise Condition="Stream.ReadDataUInt16(UInt32Data) &lt;&gt; 2" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('NominalBits: %d', UInt32Data)" Condition="IsVerbose"/>
+                    <msx:Element.SetAttribute Element="DataE" Name="NominalBits" Value="IntToStr(UInt32Data)"/>
 
-                        <Execute Statement="Stream.Position:= BlockStart + coTriggerTimeOffset"/>
-                        <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('TriggerTime: %g', FloatValue)" Condition="IsVerbose"/>
+                    <Execute Statement="Stream.Position:= BlockStart + coTriggerTimeOffset"/>
+                    <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('TriggerTime: %g', FloatValue)" Condition="IsVerbose"/>
 
-                        <Execute Statement="Stream.Position:= BlockStart + coPixelOffsetOffset"/>
-                        <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('PixelOffset: %g', FloatValue)" Condition="IsVerbose"/>
+                    <Execute Statement="Stream.Position:= BlockStart + coPixelOffsetOffset"/>
+                    <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('PixelOffset: %g', FloatValue)" Condition="IsVerbose"/>
 
-                        <Execute Statement="Stream.Position:= BlockStart + coHorizontalUncertaintyOffset"/>
-                        <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('HorizontalUncertainty: %g', FloatValue)" Condition="IsVerbose"/>
+                    <Execute Statement="Stream.Position:= BlockStart + coHorizontalUncertaintyOffset"/>
+                    <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
+                    <rep:Reporter.Information Text="Format('HorizontalUncertainty: %g', FloatValue)" Condition="IsVerbose"/>
 
-                        <Execute Statement="Stream.Position:= BlockStart + DescriptionBlockSize"/>
-                        <stm:SetState Name="WaveData"/>
+                    <Execute Statement="Stream.Position:= BlockStart + DescriptionBlockSize"/>
+                    <stm:SetState Name="WaveData"/>
 
-                        <rep:Reporter.Information Text="Format('BlockSize: %d', BlockSize)" Condition="IsVerbose"/>
-                        <rep:Reporter.Information Text="Format('Stream.Position: %d', Stream.Position)" Condition="IsVerbose"/>
-                        <rep:Reporter.Information Text="Format('Stream.Size: %d', Stream.Size)" Condition="IsVerbose"/>
-                      </Block>
-                    </stm:State>
-                    <stm:State Name="WaveData">
-                      <Raise Condition="Stream.ReadDataInt8(RawElement) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingWaveData)"/>
-                      <!--<rep:Reporter.Information Text="Format('%d', RawElement)" Condition="IsVerbose"/>-->
-                      <Execute Statement="Value:= RawElement * VFactor + VOffset"/>
-                      <msx:Document.CreateElement Document="XmlDoc" Element="PointE" Name="P" ParentElement="DataE"/>
-                      <msx:Element.SetAttribute Element="PointE" Name="X" Value="FloatTocode(Time)"/>
-                      <msx:Element.SetAttribute Element="PointE" Name="Y" Value="FloatTocode(Value)"/>
-                      <Execute Statement="Time:= Time + TimePerSample"/>
-                      <Execute Statement="NumberOfPoints:= NumberOfPoints - 1"/>
-                      <stm:SetState Name="Done" Condition="NumberOfPoints = 0"/>
-                    </stm:State>
-                    <stm:State Name="Done">
-                    </stm:State>
-                  </stm:HandleStates>
-                </ForLoop>
-              </stm:StateHandler>
-            </Object.Use>
-            <Raise Expression="Exception.Create(Format(sErrorInvalidTraceData, BlockSize))" Condition="NumberOfPoints &lt;&gt; 0"/>
-            <Variable Identifier="WriteStream" Type="TSequentialFileWriteStream" Init="TSequentialFileWriteStream.Create(Filename)"/>
-            <Variable Identifier="Stream" Type="IStream" Init="WriteStream as IStream"/>
-            <Variable Identifier="MXWriter" Type="IMXWriter" Init="CoMXXMLWriter60.Create"/>
-            <Execute Statement="MXWriter.Output:= Stream"/>
-            <Execute Statement="MXWriter.Indent:= True"/>
-            <Execute Statement="MXWriter.encoding:= 'utf-8'"/>
-            <Variable Identifier="Output" Type="Variant" Init="MXWriter"/>
-            <Variable Identifier="XMLReader" Type="ISAXXMLReader" Init="CoSAXXMLReader60.Create"/>
-            <Execute Statement="XMLReader.putContentHandler(MXWriter as ISAXContentHandler)"/>
-            <Execute Statement="XMLReader.Parse(XmlDoc)"/>
-          </Try>
-          <Finally>
-            <Execute Statement="OleCheck(SafeArrayDestroy(RawDataArray))"/>
-          </Finally>
-        </TryFinally>
+                    <rep:Reporter.Information Text="Format('BlockSize: %d', BlockSize)" Condition="IsVerbose"/>
+                    <rep:Reporter.Information Text="Format('Stream.Position: %d', Stream.Position)" Condition="IsVerbose"/>
+                    <rep:Reporter.Information Text="Format('Stream.Size: %d', Stream.Size)" Condition="IsVerbose"/>
+                  </Block>
+                </stm:State>
+                <stm:State Name="WaveData">
+                  <Raise Condition="Stream.ReadDataInt8(RawElement) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingWaveData)"/>
+                  <!--<rep:Reporter.Information Text="Format('%d', RawElement)" Condition="IsVerbose"/>-->
+                  <Execute Statement="Value:= RawElement * VFactor + VOffset"/>
+                  <msx:Document.CreateElement Document="XmlDoc" Element="PointE" Name="P" ParentElement="DataE"/>
+                  <msx:Element.SetAttribute Element="PointE" Name="X" Value="FloatTocode(Time)"/>
+                  <msx:Element.SetAttribute Element="PointE" Name="Y" Value="FloatTocode(Value)"/>
+                  <Execute Statement="Time:= Time + TimePerSample"/>
+                  <Execute Statement="NumberOfPoints:= NumberOfPoints - 1"/>
+                  <stm:SetState Name="Done" Condition="NumberOfPoints = 0"/>
+                </stm:State>
+                <stm:State Name="Done">
+                </stm:State>
+              </stm:HandleStates>
+            </ForLoop>
+          </stm:StateHandler>
+        </Object.Use>
+        <Raise Expression="Exception.Create(Format(sErrorInvalidTraceData, BlockSize))" Condition="NumberOfPoints &lt;&gt; 0"/>
+        <Variable Identifier="WriteStream" Type="TSequentialFileWriteStream" Init="TSequentialFileWriteStream.Create(Filename)"/>
+        <Variable Identifier="Stream" Type="IStream" Init="WriteStream as IStream"/>
+        <Variable Identifier="MXWriter" Type="IMXWriter" Init="CoMXXMLWriter60.Create"/>
+        <Execute Statement="MXWriter.Output:= Stream"/>
+        <Execute Statement="MXWriter.Indent:= True"/>
+        <Execute Statement="MXWriter.encoding:= 'utf-8'"/>
+        <Variable Identifier="Output" Type="Variant" Init="MXWriter"/>
+        <Variable Identifier="XMLReader" Type="ISAXXMLReader" Init="CoSAXXMLReader60.Create"/>
+        <Execute Statement="XMLReader.putContentHandler(MXWriter as ISAXContentHandler)"/>
+        <Execute Statement="XMLReader.Parse(XmlDoc)"/>
       </Block>
     </Procedure>
 
@@ -1197,7 +1160,7 @@
                         <Raise Condition="Stream.ReadDataSingle(ProbeAttenuation) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
                         <Execute Statement="AcquisitionInfo.ProbeAttenuation:= ProbeAttenuation"/>
                         <rep:Reporter.Information Text="Format('ProbeAttenuation: %g', ProbeAttenuation)" Condition="IsVerbose"/>
-                        
+
                         <Execute Statement="Stream.Position:= BlockStart + coVerticalGainOffset"/>
                         <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
                         <rep:Reporter.Information Text="Format('VerticalGain: %g', FloatValue)" Condition="IsVerbose"/>
@@ -1221,7 +1184,7 @@
                         <rep:Reporter.Information Text="Format('HorizontalOffset: %g', FloatValue)" Condition="IsVerbose"/>
                         <Execute Statement="AcquisitionInfo.Time:= FloatValue - NumberOfPoints * TimePerSample * 0.5"/>
                         <Execute Statement="AcquisitionInfo.HOffset:= FloatValue"/>
-                        
+
                         <Execute Statement="Stream.Position:= BlockStart + coSegmentIndexOffset"/>
                         <Raise Condition="Stream.ReadDataInt32(Int32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
                         <rep:Reporter.Information Text="Format('SegmentIndex: %d', Int32Data)" Condition="IsVerbose"/>
@@ -1307,20 +1270,12 @@
           <ForLoop Indexer="ActiveFrameIndex" From="1" To="FrameHighIndex">
             <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
             <ExitOnAbortRequest/>
-            <Variable Identifier="RawDataArray" Init="WaveForm(Trace, ActiveFrameIndex, WaveFormFormat)"/>
-            <TryFinally>
-              <Try>
-                <Raise Condition="not Stream.SetSafeArray(RawDataArray)" Expression="Exception.Create(sErrorGettingWaveData)"/>
-                <!--<Execute Statement="Stream.SaveToFile(Format('C:\Users\MW\SynologyDrive\Transfer\WavePointLimitTest01\Wave\Wave %.3d.dat', ActiveFrameIndex))" Condition="IsDebugging"/>-->
-                <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
-                <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', Stream.Size, (EndTime-StartTime)/QueryPerformanceFrequency, Stream.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Condition="IsVerbose"/>
-                <Execute Statement="LoadSamplesFromStream(Result, Stream, LimitSamples)"/>
-              </Try>
-              <Finally>
-                <Execute Statement="Stream.Clear"/>
-                <Execute Statement="OleCheck(SafeArrayDestroy(RawDataArray))" Condition="not IsEmpty(RawDataArray)"/>
-              </Finally>
-            </TryFinally>
+            <Object.Use Identifier="Stream" Type="TStream" Expression="WaveForm(Trace, ActiveFrameIndex, WaveFormFormat)">
+              <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
+              <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', Stream.Size, (EndTime-StartTime)/QueryPerformanceFrequency, Stream.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Condition="IsVerbose"/>
+              <Execute Statement="LoadSamplesFromStream(Result, Stream, LimitSamples)"/>
+              <!--<Execute Statement="Stream.SaveToFile(Format('C:\Users\MW\SynologyDrive\Transfer\WavePointLimitTest01\Wave\Wave %.3d.dat', ActiveFrameIndex))" Condition="IsDebugging"/>-->
+            </Object.Use>
             <Execute Statement="WaveFormFormat:= TWaveFormFormat.Dat2"/>
           </ForLoop>
         </Object.Use>
@@ -1342,38 +1297,25 @@
           <Execute Statement="LimitSamples:= Options.LimitSamples"/>
         </Block>
         <Execute Statement="WaveSetup(0, LimitSamples)"/>
-        <Object.Use Identifier="Stream" Type="TSafeArrayStream" Expression="TSafeArrayStream.Create">
-          <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
+        <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
+        <Object.Use Identifier="Stream" Type="TMemoryStream" Expression="WaveForm(Trace, 0, TWaveFormFormat.All)">
           <ExitOnAbortRequest/>
-          <Variable Identifier="RawDataArray" Init="WaveForm(Trace, 0, TWaveFormFormat.All)"/>
-          <TryFinally>
-            <Try>
-              <Raise Condition="not Stream.SetSafeArray(RawDataArray)" Expression="Exception.Create(sErrorGettingWaveData)"/>
-              <!--<Execute Statement="Stream.SaveToFile(Format('C:\Users\MW\SynologyDrive\Transfer\WavePointLimitTest01\Wave\Wave %.3d.dat', ActiveFrameIndex))" Condition="IsDebugging"/>-->
-              <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
-              <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', Stream.Size, (EndTime-StartTime)/QueryPerformanceFrequency, Stream.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Condition="IsVerbose"/>
-              <Execute Statement="LoadSamplesFromStream(Result, Stream, LimitSamples)"/>
-            </Try>
-            <Finally>
-              <Execute Statement="Stream.Clear"/>
-              <Execute Statement="OleCheck(SafeArrayDestroy(RawDataArray))" Condition="not IsEmpty(RawDataArray)"/>
-            </Finally>
-          </TryFinally>
+          <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
+          <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', Stream.Size, (EndTime-StartTime)/QueryPerformanceFrequency, Stream.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Condition="IsVerbose"/>
+          <Execute Statement="LoadSamplesFromStream(Result, Stream, LimitSamples)"/>
         </Object.Use>
       </Block>
     </Function>
 
     <Procedure Identifier="TSiglentSDS1104X.Stop">
       <Block>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString('Stop', retCount))"/>
+        <Execute Statement="WriteString('Stop')"/>
       </Block>
     </Procedure>
 
     <Procedure Identifier="TSiglentSDS1104X.Wait">
       <Block>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString('Wait', retCount))"/>
+        <Execute Statement="WriteString('Wait')"/>
       </Block>
     </Procedure>
 
@@ -1382,22 +1324,19 @@
         <Parameter Identifier="Time" Type="Extended"/>
       </Parameters>
       <Block>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString('Wait ' + FloatToCode(Time), retCount))"/>
+        <Execute Statement="WriteString('Wait ' + FloatToCode(Time))"/>
       </Block>
     </Procedure>
 
     <Procedure Identifier="TSiglentSDS1104X.Arm">
       <Block>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString('Arm', retCount))"/>
+        <Execute Statement="WriteString('Arm')"/>
       </Block>
     </Procedure>
 
     <Function Identifier="TSiglentSDS1104X.ClearStatusFlags" Type="UInt32">
       <Block>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString('INR?', retCount))"/>
+        <Execute Statement="WriteString('INR?')"/>
         <Execute Statement="Result:= ReadUInt32"/>
       </Block>
     </Function>
@@ -1407,10 +1346,9 @@
         <Parameter Identifier="Time" Type="TAvgTime"/>
       </Parameters>
       <Block>
-        <Variable Identifier="retCount"/>
-        <Execute Statement="OleCheck(Message.WriteString(Format('ACQUIRE_WAY AVERAGE,%s', AvgTime[Time]), retCount))"/>
+        <Execute Statement="WriteString(Format('ACQUIRE_WAY AVERAGE,%s', AvgTime[Time]))"/>
       </Block>
     </Procedure>
-    
+
   </Procedures>
 </pkg:Library>
