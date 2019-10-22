@@ -119,7 +119,7 @@
         <!--<Variable Identifier="Start" Type="Int32" Init="0"/>
         <Variable Identifier="Count" Type="Int32" Init="Samples.Count"/>-->
         <rep:Reporter.Information Text="Format('Start: %d, Count: %d', Start, Count)" Condition="IsVerbose"/>
-        <Variable Identifier="VFactor" Type="Extended" Init="Samples.VFactor / Count"/>
+        <Variable Identifier="VFactor" Type="Extended" Init="IfElse(Count = 0, Samples.VFactor, Samples.VFactor / Count)"/>
         <Variable Identifier="VFactorSingle" Type="Extended" Init="Samples.VFactor"/>
         <Variable Identifier="VOffset" Type="Extended" Init="Samples.VOffset"/>
         <Variable Identifier="Time" Type="Extended" Init="Samples.Time"/>

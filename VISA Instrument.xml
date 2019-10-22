@@ -69,6 +69,11 @@
     </DataClass>
 
   </Type>
+
+  <Variables>
+    <Variable Identifier="DoReportVisa" Type="Boolean" Init="False"/>
+  </Variables>
+  
   <Procedures>
     <Constructor Identifier="TMultiFrameAcquisitionInfo.Create">
       <Block>
@@ -176,6 +181,7 @@
     <Function Identifier="TVISAInstrument.ReadFloat" Type="Extended">
       <Block>
         <Variable Identifier="readResult" Type="AnsiString" Init="VisaResource.AnsiReadNoLF"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', readResult)" Condition="DoReportVisa"/>
         <Execute Statement="Result:= CodeToFloat(readResult)"/>
       </Block>
     </Function>
@@ -183,6 +189,7 @@
     <Function Identifier="TVISAInstrument.ReadUInt32" Type="UInt32">
       <Block>
         <Variable Identifier="readResult" Type="AnsiString" Init="VisaResource.AnsiReadNoLF"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', readResult)" Condition="DoReportVisa"/>
         <Execute Statement="Result:= StrToInt(readResult)"/>
       </Block>
     </Function>
@@ -192,13 +199,16 @@
         <Parameter Identifier="Value" Type="AnsiString"/>
       </Parameters>
       <Block>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Value)" Condition="DoReportVisa"/>
         <Execute Statement="Result:= VisaResource.AnsiQueryNoLF(Value)"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', Result)" Condition="DoReportVisa"/>
       </Block>
     </Function>
 
     <Function Identifier="TVISAInstrument.ReadString" Type="AnsiString">
       <Block>
         <Execute Statement="Result:= VisaResource.AnsiReadNoLF"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', Result)" Condition="DoReportVisa"/>
       </Block>
     </Function>
 
@@ -207,6 +217,7 @@
         <Parameter Identifier="Value" Type="AnsiString"/>
       </Parameters>
       <Block>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Value)" Condition="DoReportVisa"/>
         <Execute Statement="VisaResource.AnsiWrite(Value)"/>
       </Block>
     </Procedure>
@@ -242,14 +253,16 @@
         <Constant Identifier="sOff" Type="AnsiString" Expression="'OFF'"/>
       </Constants>
       <Block>
-        <Variable Identifier="ValueS" Type="AnsiString" Init="IfElse(Value, sOn, sOff)"/>
-        <Execute Statement="VisaResource.AnsiWrite(AnsiFormat('%s %s', Parameter, ValueS))"/>
+        <Variable Identifier="Command" Type="AnsiString" Init="AnsiFormat('%s %s', Parameter, IfElse(Value, sOn, sOff))"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Command)" Condition="DoReportVisa"/>
+        <Execute Statement="VisaResource.AnsiWrite(Command)"/>
       </Block>
     </Procedure>
 
     <Function Identifier="TVISAInstrument.ReadInt64" Type="Int64">
       <Block>
         <Variable Identifier="readResult" Type="AnsiString" Init="VisaResource.AnsiReadNoLF"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', readResult)" Condition="DoReportVisa"/>
         <Execute Statement="Result:= StrToInt64(readResult)"/>
       </Block>
     </Function>
@@ -260,6 +273,7 @@
       </Parameters>
       <Block>
         <Execute Statement="Result:= VisaResource.ReadBlob(BufSize)"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %d bytes', Result.Size)" Condition="DoReportVisa"/>
       </Block>
     </Function>
 
@@ -268,6 +282,7 @@
         <Parameter Identifier="Blob" Type="TStream"/>
       </Parameters>
       <Block>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending %d bytes', Blob.Size)" Condition="DoReportVisa"/>
         <Execute Statement="VisaResource.WriteBlob(Blob)"/>
       </Block>
     </Procedure>
@@ -278,7 +293,9 @@
         <Parameter Identifier="Value" Type="Int64"/>
       </Parameters>
       <Block>
-        <Execute Statement="VisaResource.AnsiWrite(AnsiFormat('%s %d', Parameter, Value))"/>
+        <Variable Identifier="Command" Type="AnsiString" Init="AnsiFormat('%s %d', Parameter, Value)"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Command)" Condition="DoReportVisa"/>
+        <Execute Statement="VisaResource.AnsiWrite(Command)"/>
       </Block>
     </Procedure>
 
