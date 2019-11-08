@@ -16,21 +16,26 @@
   xmlns:sts="urn:schemas-www-wisware.nl-xmlscripting-showstatus"
   xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
   >
+  <Uses>
+    <Use Identifier="ElectronicUtils"/>
+  </Uses>
+  
   <Type>
     <Enumeration Identifier="TVisaAttributeState" Elements="NoValue, ValidValue, InvalidValue, PendingChange"/>
-    
+
     <DataClass Identifier="TVisaInstrument">
       <Field Identifier="VisaResource" Type="TVisaResource"/>
     </DataClass>
     
+    <DataClass Identifier="TIniHelper" DefaultConstructor="none">
+      <Field Identifier="Inifile" Type="TCustomIniFile"/>
+      <Field Identifier="EnableEcho" Type="Boolean"/>
+      <Field Identifier="CurrentSection" Type="string"/>
+    </DataClass>
+
     <DataClass Identifier="TVisaAtrributeGroup" DefaultConstructor="none">
       <VirtualMethod Identifier="vmSetAttributeStates"/>
       <Field Identifier="Instrument" Type="TVisaInstrument"/>
-    </DataClass>
-
-    <DataClass Identifier="TRawSample">
-      <Field Identifier="Value" Type="Int32"/>
-      <Field Identifier="Next" Type="TRawSample"/>
     </DataClass>
 
     <DataClass Identifier="TAcquisitionInfo">
@@ -67,8 +72,13 @@
     <DataClass Identifier="TScopeSampleCollection">
       <Field Identifier="SampleHead" Type="TScopeSample"/>
     </DataClass>
-
   </Type>
+  <Constants>
+    <Constant Identifier="cOPCQuery" Type="ViString" Expression="'*OPC?'"/>
+    <Constant Identifier="viSpace" Type="ViString" Expression="' '"/>
+    <Constant Identifier="viDecimalSeperatior" Type="string" Expression="'.'"/>
+    <Constant Identifier="sErrorUnsupportedOperation" Type="string" Expression="'Unsupported operation'"/>
+  </Constants>
 
   <Variables>
     <Variable Identifier="DoReportVisa" Type="Boolean" Init="False"/>
@@ -161,7 +171,7 @@
 
     <Function Identifier="CreateVisaSession" Type="IVisaSession">
       <Parameters>
-        <Parameter Identifier="ResourceName" Type="AnsiString"/>
+        <Parameter Identifier="ResourceName" Type="ViString"/>
       </Parameters>
       <Block>
         <Variable Identifier="ResourceManager" Type="IResourceManager3" Init="CoResourceManager.Create"/>
@@ -180,7 +190,7 @@
 
     <Function Identifier="TVISAInstrument.ReadFloat" Type="Extended">
       <Block>
-        <Variable Identifier="readResult" Type="AnsiString" Init="VisaResource.AnsiReadNoLF"/>
+        <Variable Identifier="readResult" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
         <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', readResult)" Condition="DoReportVisa"/>
         <Execute Statement="Result:= CodeToFloat(readResult)"/>
       </Block>
@@ -188,24 +198,49 @@
 
     <Function Identifier="TVISAInstrument.ReadUInt32" Type="UInt32">
       <Block>
-        <Variable Identifier="readResult" Type="AnsiString" Init="VisaResource.AnsiReadNoLF"/>
+        <Variable Identifier="readResult" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
         <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', readResult)" Condition="DoReportVisa"/>
         <Execute Statement="Result:= StrToInt(readResult)"/>
       </Block>
     </Function>
 
-    <Function Identifier="TVISAInstrument.QueryString">
+    <Function Identifier="TVISAInstrument.QueryString" Type="ViString">
       <Parameters>
-        <Parameter Identifier="Value" Type="AnsiString"/>
+        <Parameter Identifier="Query" Type="ViString"/>
       </Parameters>
       <Block>
-        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Value)" Condition="DoReportVisa"/>
-        <Execute Statement="Result:= VisaResource.AnsiQueryNoLF(Value)"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Query)" Condition="DoReportVisa"/>
+        <Execute Statement="Result:= VisaResource.AnsiQueryNoLF(Query)"/>
         <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', Result)" Condition="DoReportVisa"/>
       </Block>
     </Function>
 
-    <Function Identifier="TVISAInstrument.ReadString" Type="AnsiString">
+    <Function Identifier="TVISAInstrument.QueryFloat" Type="Extended">
+      <Parameters>
+        <Parameter Identifier="Query" Type="ViString"/>
+      </Parameters>
+      <Block>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Query)" Condition="DoReportVisa"/>
+        <Variable Identifier="ResultS" Type="ViString" Init="VisaResource.AnsiQueryNoLF(Query)"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', ResultS)" Condition="DoReportVisa"/>
+        <Execute Statement="Result:= CodeToFloat(ResultS)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TVISAInstrument.QueryConvInt" Type="ConvInt">
+      <Parameters>
+        <Parameter Identifier="Query" Type="ViString"/>
+        <Parameter Identifier="UnitConvertor" Type="TUnitConvertor"/>
+      </Parameters>
+      <Block>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Query)" Condition="DoReportVisa"/>
+        <Variable Identifier="readResult" Type="string" Init="VisaResource.AnsiQueryNoLF(Query)"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', readResult)" Condition="DoReportVisa"/>
+        <Raise Expression="Exception.Create(Format('Cannot convert: %s', readResult))" Condition="not UnitConvertor.StrToIntValue(readResult, Result)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TVISAInstrument.ReadString" Type="ViString">
       <Block>
         <Execute Statement="Result:= VisaResource.AnsiReadNoLF"/>
         <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', Result)" Condition="DoReportVisa"/>
@@ -214,7 +249,7 @@
 
     <Procedure Identifier="TVISAInstrument.WriteString">
       <Parameters>
-        <Parameter Identifier="Value" Type="AnsiString"/>
+        <Parameter Identifier="Value" Type="ViString"/>
       </Parameters>
       <Block>
         <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Value)" Condition="DoReportVisa"/>
@@ -224,11 +259,11 @@
     
     <Function Identifier="TVISAInstrument.ReadOnOff" Type="Boolean">
       <Constants>
-        <Constant Identifier="sOn" Type="AnsiString" Expression="'ON'"/>
-        <Constant Identifier="sOff" Type="AnsiString" Expression="'OFF'"/>
+        <Constant Identifier="sOn" Type="ViString" Expression="'ON'"/>
+        <Constant Identifier="sOff" Type="ViString" Expression="'OFF'"/>
       </Constants>
       <Block>
-        <Variable Identifier="readResult" Type="AnsiString" Init="VisaResource.AnsiReadNoLF"/>
+        <Variable Identifier="readResult" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
         <Choose>
           <When Expression="readResult = sOn">
             <Execute Statement="Result:= True"/>
@@ -245,15 +280,15 @@
 
     <Procedure Identifier="TVISAInstrument.WriteOnOff">
       <Parameters>
-        <Parameter Identifier="Parameter" Type="AnsiString"/>
+        <Parameter Identifier="Parameter" Type="ViString"/>
         <Parameter Identifier="Value" Type="Boolean"/>
       </Parameters>
       <Constants>
-        <Constant Identifier="sOn" Type="AnsiString" Expression="'ON'"/>
-        <Constant Identifier="sOff" Type="AnsiString" Expression="'OFF'"/>
+        <Constant Identifier="sOn" Type="ViString" Expression="'ON'"/>
+        <Constant Identifier="sOff" Type="ViString" Expression="'OFF'"/>
       </Constants>
       <Block>
-        <Variable Identifier="Command" Type="AnsiString" Init="AnsiFormat('%s %s', Parameter, IfElse(Value, sOn, sOff))"/>
+        <Variable Identifier="Command" Type="ViString" Init="AnsiFormat('%s %s', Parameter, IfElse(Value, sOn, sOff))"/>
         <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Command)" Condition="DoReportVisa"/>
         <Execute Statement="VisaResource.AnsiWrite(Command)"/>
       </Block>
@@ -261,11 +296,35 @@
 
     <Function Identifier="TVISAInstrument.ReadInt64" Type="Int64">
       <Block>
-        <Variable Identifier="readResult" Type="AnsiString" Init="VisaResource.AnsiReadNoLF"/>
+        <Variable Identifier="readResult" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
         <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', readResult)" Condition="DoReportVisa"/>
         <Execute Statement="Result:= StrToInt64(readResult)"/>
       </Block>
     </Function>
+
+    <Function Identifier="TVISAInstrument.ReadConvInt" Type="ConvInt">
+      <Parameters>
+        <Parameter Identifier="UnitConvertor" Type="TUnitConvertor"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="readResult" Type="string" Init="VisaResource.AnsiReadNoLF"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', readResult)" Condition="DoReportVisa"/>
+        <Raise Expression="Exception.Create(Format('Cannot convert: %s', readResult))" Condition="not UnitConvertor.StrToIntValue(readResult, Result)"/>
+      </Block>
+    </Function>
+    
+    <Procedure Identifier="TVISAInstrument.WriteParamConvInt">
+      <Parameters>
+        <Parameter Identifier="Parameter" Type="ViString"/>
+        <Parameter Identifier="Value" Type="ConvInt"/>
+        <Parameter Identifier="UnitConvertor" Type="TUnitConvertor"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="Command" Type="ViString" Init="Parameter + viSpace + UnitConvertor.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior)"/>
+        <rep:Reporter.Information Target="Visa" Text="AnsiFormat('Sending: %s', Command)" Condition="DoReportVisa"/>
+        <Execute Statement="VisaResource.AnsiWrite(Command)"/>
+      </Block>
+    </Procedure>
 
     <Function Identifier="TVISAInstrument.ReadBlob" Type="TMemoryStream">
       <Parameters>
@@ -289,17 +348,17 @@
 
     <Procedure Identifier="TVISAInstrument.WriteInt64">
       <Parameters>
-        <Parameter Identifier="Parameter" Type="AnsiString"/>
+        <Parameter Identifier="Parameter" Type="ViString"/>
         <Parameter Identifier="Value" Type="Int64"/>
       </Parameters>
       <Block>
-        <Variable Identifier="Command" Type="AnsiString" Init="AnsiFormat('%s %d', Parameter, Value)"/>
+        <Variable Identifier="Command" Type="ViString" Init="AnsiFormat('%s %d', Parameter, Value)"/>
         <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Command)" Condition="DoReportVisa"/>
         <Execute Statement="VisaResource.AnsiWrite(Command)"/>
       </Block>
     </Procedure>
 
-    <Property Identifier="TVISAInstrument.IDN" Type="AnsiString" >
+    <Property Identifier="TVISAInstrument.IDN" Type="ViString" >
       <Getter>
         <Execute Statement="Result:= QueryString('*IDN?')"/>
       </Getter>
@@ -328,8 +387,118 @@
         <Execute Statement="VisaResource.Timeout:= Value"/>
       </Setter>
     </Property>
-    
 
+    <Function Identifier="TVISAInstrument.IsOperationComplete" Type="Boolean">
+      <Constants>
+        <Constant Identifier="c0" Type="ViString" Expression="'0'"/>
+        <Constant Identifier="c1" Type="ViString" Expression="'1'"/>
+      </Constants>
+      <Block>
+        <Variable Identifier="ResultS" Type="ViString" Init="QueryString(cOPCQuery)"/>
+        <Choose>
+          <When Expression="ResultS = c0">
+            <Execute Statement="Result:= False"/>
+          </When>
+          <When Expression="ResultS = c1">
+            <Execute Statement="Result:= True"/>
+          </When>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorUnsupportedOperation)"/>
+          </Otherwise>
+        </Choose>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TIniHelper.Section">
+      <Parameters>
+        <Parameter Identifier="Section" Type="string"/>
+        <Parameter Identifier="DoSeperate" Type="Boolean"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="CurrentSection:= Section"/>
+        <rep:Reporter.Information Text="''" Condition="DoSeperate and EnableEcho"/>
+        <rep:Reporter.Information Text="Format('[%s]', Section)" Markup="Header3" Condition="EnableEcho"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TIniHelper.Section">
+      <Parameters>
+        <Parameter Identifier="Section" Type="string"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="CurrentSection:= Section"/>
+        <rep:Reporter.Information Text="''" Condition="EnableEcho"/>
+        <rep:Reporter.Information Text="Format('[%s]', Section)" Markup="Header3" Condition="EnableEcho"/>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="TIniHelper.ReadBool" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="Boolean"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= Inifile.ReadBool(CurrentSection, Key, Default)"/>
+        <rep:Reporter.Information Text="Format('%s=%s', Key, IfElse(Result, '1', '0'))" Condition="EnableEcho"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TIniHelper.ReadString" Type="string">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="string"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= Inifile.ReadString(CurrentSection, Key, Default)"/>
+        <rep:Reporter.Information Text="Format('%s=%s', Key, Result)" Condition="EnableEcho"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TIniHelper.ReadFloat" Type="Extended">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="Extended"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= CodeToFloat(Inifile.ReadString(CurrentSection, Key, FloatToCode(Default)))"/>
+        <rep:Reporter.Information Text="Format('%s=%s', Key, FloatToCode(Result))" Condition="EnableEcho"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TIniHelper.ReadInteger" Type="Integer">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="Integer"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= Inifile.ReadInteger(CurrentSection, Key, Default)"/>
+        <rep:Reporter.Information Text="Format('%s=%d', Key, Result)" Condition="EnableEcho"/>
+      </Block>
+    </Function>
+
+    <Constructor Identifier="TIniHelper.Create">
+      <Parameters>
+        <Parameter Identifier="Inifile" Type="TCustomIniFile"/>
+        <Parameter Identifier="EnableEcho" Type="Boolean"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Self.Inifile:= Inifile"/>
+        <Execute Statement="Self.EnableEcho:= EnableEcho"/>
+      </Block>
+    </Constructor>
+    
+    <Function Identifier="TIniHelper.ReadConvInt" Type="ConvInt">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="UnitConvertor" Type="TUnitConvertor"/>
+        <Parameter Identifier="Default" Type="string"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="ResultS" Type="string" Init="Inifile.ReadString(CurrentSection, Key, Default)"/>
+        <Raise Expression="Exception.Create(Format('Cannot convert: %s', ResultS))" Condition="not UnitConvertor.StrToIntValue(ResultS, Result)"/>
+        <rep:Reporter.Information Text="Format('%s=%s', Key, UnitConvertor.IntValueToStr(Result, TUnitPostFix.Separated, '.'))" Condition="EnableEcho"/>
+      </Block>
+    </Function>
 
   </Procedures>
 </pkg:Library>
