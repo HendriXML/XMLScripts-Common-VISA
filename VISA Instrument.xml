@@ -476,6 +476,17 @@
       </Block>
     </Function>
 
+    <Function Identifier="TIniHelper.ReadBoolean" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="Boolean"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= Inifile.ReadBool(CurrentSection, Key, Default)"/>
+        <rep:Reporter.Information Text="Format('%s=%d', Key, IfElse(Result, 1, 0))" Condition="EnableEcho"/>
+      </Block>
+    </Function>
+
     <Constructor Identifier="TIniHelper.Create">
       <Parameters>
         <Parameter Identifier="Inifile" Type="TCustomIniFile"/>

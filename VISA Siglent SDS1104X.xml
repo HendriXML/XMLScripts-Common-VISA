@@ -98,6 +98,7 @@
     <Constant Identifier="sErrorChannelWithoutTrace" Type="string" Expression="'Channel doesn''t have a trace'"/>
     <Constant Identifier="sInvalidInitialWaveformat" Type="string" Expression="'Invalid initial Waveformat'"/>
     <Constant Identifier="sErrorUnsupportedAcquisitionType" Type="string" Expression="'Unsupported acquisition type'"/>
+    <Constant Identifier="sErrorUnsupportedBandWidthAnswer" Type="string" Expression="'Unsupported bandwidth answer: '"/>
 
     <Constant Identifier="c0" Type="AnsiChar" Expression="'0'"/>
     <Constant Identifier="cVDivisions" Type="UInt32" Expression="8"/>
@@ -126,6 +127,8 @@
     <Constant Identifier="coTriggerTimeOffset" Type="UInt32" Expression="296"/>
     <Constant Identifier="coProbeAttenuationOffset" Type="UInt32" Expression="328"/>
     <Constant Identifier="cWaveCaptureTimeout" Type="UInt32" Expression="100000"/>
+    <Constant Identifier="viSpace" Type="ViString" Expression="' '"/>
+    <Constant Identifier="viParamSep" Type="ViString" Expression="','"/>
     <Constant Identifier="cCH1" Type="ViString" Expression="'C1'"/>
     <Constant Identifier="cCH2" Type="ViString" Expression="'C2'"/>
     <Constant Identifier="cCH3" Type="ViString" Expression="'C3'"/>
@@ -233,6 +236,8 @@
     <Constant Identifier="cMEMORY_SIZECommand" Type="ViString" Expression="'MEMORY_SIZE '"/>
     <Constant Identifier="cWFSUTYPE1Command" Type="ViString" Expression="'WFSU TYPE,1'"/>
     <Constant Identifier="cWFSUCommand" Type="ViString" Expression="'WFSU SP,%d,NP,%d,FP,%d,SN,%d'"/>
+    <Constant Identifier="cBANDWIDTH_LIMITQuery" Type="ViString" Expression="'BANDWIDTH_LIMIT?'"/>
+    <Constant Identifier="cBANDWIDTH_LIMITCommand" Type="ViString" Expression="'BANDWIDTH_LIMIT '"/>
   </Constants>
 
   <Variables>
@@ -1033,6 +1038,128 @@
       </Getter>
       <Setter>
         <Execute Statement="WriteOnOff(HWTraceID[HWTraceType] + cTRACommand, Value)"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentSDS1104X.BandwidthLimit" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TChannelType"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="WriteString(cBANDWIDTH_LIMITQuery)"/>
+        <Variable Identifier="RetValue" Type="viString" Init="ReadString"/>
+        <Execute Statement="Result:= False"/>
+        <Variable Identifier="CurrentChannel" Type="TChannelType"/>
+        <Variable Identifier="ValidEndstate" Type="Boolean" Init="False"/>
+        <!-- C1,ON,C2,OFF,C3,OFF,C4,OFF -->
+        <stm:StateHandler InitialState="ChannelExpected">
+          <StringLoop StringValue="RetValue" Ansi="1" OrdinalIdentifier="ChrI">
+            <stm:HandleStates>
+              <stm:State Name="ChannelExpected">
+                <Case Expression="ChrI" OrdinalType="ansichar">
+                  <On Select="' '"/>
+                  <On Select="'C'">
+                    <stm:SetState Name="InChannelParam"/>
+                  </On>
+                  <Otherwise>
+                    <Raise Expression="Exception.Create(sErrorUnsupportedBandWidthAnswer)"/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="InChannelParam">
+                <Case Expression="ChrI" OrdinalType="ansichar">
+                  <On Select="'1'">
+                    <Execute Statement="CurrentChannel:= TChannelType.CH1"/>
+                    <stm:SetState Name="AfterChannelParam"/>
+                  </On>
+                  <On Select="'2'">
+                    <Execute Statement="CurrentChannel:= TChannelType.CH2"/>
+                    <stm:SetState Name="AfterChannelParam"/>
+                  </On>
+                  <On Select="'3'">
+                    <Execute Statement="CurrentChannel:= TChannelType.CH3"/>
+                    <stm:SetState Name="AfterChannelParam"/>
+                  </On>
+                  <On Select="'4'">
+                    <Execute Statement="CurrentChannel:= TChannelType.CH4"/>
+                    <stm:SetState Name="AfterChannelParam"/>
+                  </On>
+                  <Otherwise>
+                    <Break/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="AfterChannelParam">
+                <Case Expression="ChrI" OrdinalType="ansichar">
+                  <On Select="' '">
+                  </On>
+                  <On Select="','">
+                    <stm:SetState Name="AfterStateParamStart"/>
+                  </On>
+                  <Otherwise>
+                    <Break/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="AfterStateParamStart">
+                <Case Expression="ChrI" OrdinalType="ansichar">
+                  <On Select="' '">
+                  </On>
+                  <On Select="'o', 'O'">
+                    <stm:SetState Name="AfterStateParamO"/>
+                  </On>
+                  <Otherwise>
+                    <Break/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="AfterStateParamO">
+                <Case Expression="ChrI" OrdinalType="ansichar">
+                  <On Select="'f', 'F'">
+                    <stm:SetState Name="AfterStateParamF"/>
+                  </On>
+                  <On Select="'n', 'N'">
+                    <stm:SetState Name="AfterStateDone"/>
+                    <Execute Statement="Result:= True" Condition="CurrentChannel = Channel"/>
+                    <Execute Statement="ValidEndstate:= True"/>
+                  </On>
+                  <Otherwise>
+                    <Break/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="AfterStateParamF">
+                <Case Expression="ChrI" OrdinalType="ansichar">
+                  <On Select="'f', 'F'">
+                    <stm:SetState Name="AfterStateDone"/>
+                    <Execute Statement="Result:= False" Condition="CurrentChannel = Channel"/>
+                    <Execute Statement="ValidEndstate:= True"/>
+                  </On>
+                  <Otherwise>
+                    <Break/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="AfterStateDone">
+                <Case Expression="ChrI" OrdinalType="ansichar">
+                  <On Select="' '">
+                  </On>
+                  <On Select="','">
+                    <stm:SetState Name="ChannelExpected"/>
+                    <Execute Statement="ValidEndstate:= False"/>
+                  </On>
+                  <Otherwise>
+                    <Break/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+            </stm:HandleStates>
+          </StringLoop>
+        </stm:StateHandler>
+        <Raise Expression="Exception.Create(sErrorUnsupportedBandWidthAnswer + RetValue)" Condition="not ValidEndstate"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteOnOff(cBANDWIDTH_LIMITCommand + ChannelID[Channel] + viParamSep, Value)"/>
       </Setter>
     </Property>
 
