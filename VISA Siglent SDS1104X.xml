@@ -598,10 +598,10 @@
       </Parameters>
       <Block>
         <Block Condition="IsEmpty(HWTraceTypeNameIndex)">
+          <Execute Statement="HWTraceTypeNameIndex:= TMappingCaseInSensitiveUnicodeStringToInt64.Create"/>
           <ForLoop Indexer="I" From="THWTraceType.Low" To="THWTraceType.High">
             <inx:Index.MapValue Index="HWTraceTypeNameIndex" Key="HWTraceTypeName(I)" Value="I"/>
           </ForLoop>
-          <Execute Statement="HWTraceTypeNameIndex:= TMappingCaseInSensitiveUnicodeStringToInt64.Create"/>
         </Block>
         <Variable Identifier="Found" Type="Boolean"/>
         <inx:Index.FindValue Index="HWTraceTypeNameIndex" Key="Name" Value="Result" Found="Found" Flags="NoErrorOnNotFound" />
@@ -632,10 +632,10 @@
       </Parameters>
       <Block>
         <Block Condition="IsEmpty(TriggerModeNameIndex)">
+          <Execute Statement="TriggerModeNameIndex:= TMappingCaseInSensitiveUnicodeStringToInt64.Create"/>
           <ForLoop Indexer="I" From="TTriggerMode.Low" To="TTriggerMode.High">
             <inx:Index.MapValue Index="TriggerModeNameIndex" Key="TriggerModeName(I)" Value="I"/>
           </ForLoop>
-          <Execute Statement="TriggerModeNameIndex:= TMappingCaseInSensitiveUnicodeStringToInt64.Create"/>
         </Block>
         <Variable Identifier="Found" Type="Boolean"/>
         <inx:Index.FindValue Index="TriggerModeNameIndex" Key="Name" Value="Result" Found="Found" Flags="NoErrorOnNotFound" />
