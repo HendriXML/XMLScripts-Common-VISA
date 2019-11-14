@@ -24,11 +24,9 @@
   <Type>
     <Enumeration Identifier="TImageType" Elements="BMP, PNG"/>
 
-    <Enumeration Identifier="THeaderType" Elements="Off, Short, Long"/>
+    <Enumeration Identifier="THeaderType" Elements="Off, Short, Long" LowAlias="Low" HighAlias="High"/>
 
     <Enumeration Identifier="TTraceType" Elements="CH1, CH2, CH3, CH4, Math, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15" LowAlias="Low" HighAlias="High"/>
-
-    <Enumeration Identifier="THWTraceType" Elements="CH1, CH2, CH3, CH4, TA, TB, TC, TD" LowAlias="Low" HighAlias="High"/>
 
     <Enumeration Identifier="TChannelType" Elements="CH1, CH2, CH3, CH4" LowAlias="Low" HighAlias="High"/>
 
@@ -44,12 +42,38 @@
 
     <Enumeration Identifier="TWaveFormFormat" Elements="Dat2, All"/>
 
-    <DataClass Identifier="TSiglentSDS1104X" Inherit="TVISAInstrument" ClassOfIdentifier="TTSiglentSDS1104X">
+    <DataClass Identifier="TSiglentScope" Inherit="TVISAInstrument" ClassOfIdentifier="TTSiglentScope">
+      <VirtualMethod Identifier="vmSupportsTrace"/>
       <Field Identifier="_SignalAcquiredStatusCnt" Type="UInt64"/>
       <Field Identifier="_TriggerIsReadyStatusCnt" Type="UInt64"/>
     </DataClass>
 
-    <DataClass Identifier="TSiglentSDS1104XIniHelper" Inherit="TIniHelper" DefaultConstructor="none">
+    <DataClass Identifier="TSiglentScope2CH" Inherit="TSiglentScope" ClassOfIdentifier="TTSiglentScope2CH">
+      <VirtualMethod Identifier="vmSupportsTrace" Override="true"/>
+    </DataClass>
+
+    <DataClass Identifier="TSiglentScope4CH" Inherit="TSiglentScope" ClassOfIdentifier="TTSiglentScope4CH">
+    </DataClass>
+
+    <DataClass Identifier="TSiglentSDS1104XE" Inherit="TSiglentScope4CH">
+    </DataClass>
+
+    <DataClass Identifier="TSiglentSDS1204XE" Inherit="TSiglentScope4CH">
+    </DataClass>
+
+    <DataClass Identifier="TSiglentSDS1102XE" Inherit="TSiglentScope2CH">
+    </DataClass>
+
+    <DataClass Identifier="TSiglentSDS1202XE" Inherit="TSiglentScope2CH">
+    </DataClass>
+
+    <DataClass Identifier="TSiglentScopeIniHelper" Inherit="TIniHelper">
+    </DataClass>
+
+    <DataClass Identifier="TSiglentSDS1104XEIniHelper" Inherit="TSiglentScopeIniHelper">
+    </DataClass>
+
+    <DataClass Identifier="TSiglentSDS1204XEIniHelper" Inherit="TSiglentScopeIniHelper">
     </DataClass>
 
     <DataClass Identifier="TAcquisitionOptions">
@@ -69,8 +93,6 @@
     <Constant Identifier="AwgMaxValue" Type="Int32" Expression="32767"/>
     <Constant Identifier="AwgMValueRange" Type="Int32" Expression="AwgMaxValue-AwgMinValue"/>
 
-    <Constant Identifier="ckTDiv" Type="TConvertorKind" Expression="TConvertorKind.NanoSecond"/>
-
     <Constant Identifier="sErrorGettingAWGWaveData" Type="string" Expression="'Error getting AWG WaveData'"/>
     <Constant Identifier="sErrorGettingScreenCapture" Type="string" Expression="'Error getting ScreenCapture'"/>
     <Constant Identifier="sErrorGettingWaveData" Type="string" Expression="'Error getting WaveData'"/>
@@ -80,10 +102,6 @@
     <Constant Identifier="sErrorHeaderParsing" Type="string" Expression="'Parsing error header'"/>
     <Constant Identifier="sErrorHeaderParsingInvalidTrace" Type="string" Expression="'Parsing error header - invalid trace'"/>
     <Constant Identifier="sErrorInvalidTraceData" Type="string" Expression="'Invalid trace data: %d'"/>
-    <Constant Identifier="sErrorUnexpectedHeader" Type="string" Expression="'Unexpected header'"/>
-    <Constant Identifier="sErrorUnexpectedAcquireWay" Type="string" Expression="'Unexpected AcquireWay'"/>
-    <Constant Identifier="sErrorUnsupportedHeader" Type="string" Expression="'Unsupported header'"/>
-    <Constant Identifier="sErrorUnsupportedAcquireWay" Type="string" Expression="'Unsupported AcquireWay'"/>
     <Constant Identifier="sErrorInvalidChannel" Type="string" Expression="'Invalid channel'"/>
     <Constant Identifier="sErrorInvalidChannelType" Type="string" Expression="'Invalid channel'"/>
     <Constant Identifier="sErrorInvalidTriggerMode" Type="string" Expression="'Invalid trigger mode'"/>
@@ -92,13 +110,15 @@
     <Constant Identifier="sErrorInvalidAvgTime" Type="string" Expression="'Invalid AvgTime'"/>
     <Constant Identifier="sErrorInvalidMemSize" Type="string" Expression="'Invalid MemSize'"/>
     <Constant Identifier="sErrorInvalidAcquireWay" Type="string" Expression="'Invalid acquire way'"/>
-    <Constant Identifier="sErrorUnsupportedMemSize" Type="string" Expression="'Unsupported MemSize'"/>
     <Constant Identifier="sErrorWaveFormFormat" Type="string" Expression="'Unsupported WaveFormFormat'"/>
     <Constant Identifier="sErrorTraceWithoutChannel" Type="string" Expression="'Trace doesn''t have a channel'"/>
     <Constant Identifier="sErrorChannelWithoutTrace" Type="string" Expression="'Channel doesn''t have a trace'"/>
     <Constant Identifier="sInvalidInitialWaveformat" Type="string" Expression="'Invalid initial Waveformat'"/>
     <Constant Identifier="sErrorUnsupportedAcquisitionType" Type="string" Expression="'Unsupported acquisition type'"/>
     <Constant Identifier="sErrorUnsupportedBandWidthAnswer" Type="string" Expression="'Unsupported bandwidth answer: '"/>
+    <Constant Identifier="sErrorInvalidHeaderType" Type="string" Expression="'Invalid header'"/>
+    <Constant Identifier="sErrorCouldNotDetermineScope" Type="string" Expression="'Could not determine the scope model'"/>
+    <Constant Identifier="sErrorUnknownScope" Type="string" Expression="'Unknown scope model: '"/>
 
     <Constant Identifier="c0" Type="AnsiChar" Expression="'0'"/>
     <Constant Identifier="cVDivisions" Type="UInt32" Expression="8"/>
@@ -127,12 +147,9 @@
     <Constant Identifier="coTriggerTimeOffset" Type="UInt32" Expression="296"/>
     <Constant Identifier="coProbeAttenuationOffset" Type="UInt32" Expression="328"/>
     <Constant Identifier="cWaveCaptureTimeout" Type="UInt32" Expression="100000"/>
-    <Constant Identifier="viSpace" Type="ViString" Expression="' '"/>
-    <Constant Identifier="viParamSep" Type="ViString" Expression="','"/>
-    <Constant Identifier="cCH1" Type="ViString" Expression="'C1'"/>
-    <Constant Identifier="cCH2" Type="ViString" Expression="'C2'"/>
-    <Constant Identifier="cCH3" Type="ViString" Expression="'C3'"/>
-    <Constant Identifier="cCH4" Type="ViString" Expression="'C4'"/>
+    <Constant Identifier="cWaveBlobSize" Type="UInt32" Expression="29360640"/>
+    <Constant Identifier="cScreenCapureBlobSize" Type="UInt32" Expression="1000000"/>
+
     <Constant Identifier="cNameChannelTypeCH1" Type="string" Expression="'CH1'"/>
     <Constant Identifier="cNameChannelTypeCH2" Type="string" Expression="'CH2'"/>
     <Constant Identifier="cNameChannelTypeCH3" Type="string" Expression="'CH3'"/>
@@ -158,14 +175,6 @@
     <Constant Identifier="cNameTraceTypeD13" Type="string" Expression="'D13'"/>
     <Constant Identifier="cNameTraceTypeD14" Type="string" Expression="'D14'"/>
     <Constant Identifier="cNameTraceTypeD15" Type="string" Expression="'D15'"/>
-    <Constant Identifier="cNameHWTraceTypeCH1" Type="string" Expression="'CH1'"/>
-    <Constant Identifier="cNameHWTraceTypeCH2" Type="string" Expression="'CH2'"/>
-    <Constant Identifier="cNameHWTraceTypeCH3" Type="string" Expression="'CH3'"/>
-    <Constant Identifier="cNameHWTraceTypeCH4" Type="string" Expression="'CH4'"/>
-    <Constant Identifier="cNameHWTraceTypeA" Type="string" Expression="'TA'"/>
-    <Constant Identifier="cNameHWTraceTypeB" Type="string" Expression="'TB'"/>
-    <Constant Identifier="cNameHWTraceTypeC" Type="string" Expression="'TC'"/>
-    <Constant Identifier="cNameHWTraceTypeD" Type="string" Expression="'TD'"/>
     <Constant Identifier="cNameTriggerModeAuto" Type="string" Expression="'Auto'"/>
     <Constant Identifier="cNameTriggerModeNormal" Type="string" Expression="'Normal'"/>
     <Constant Identifier="cNameTriggerModeSingle" Type="string" Expression="'Single'"/>
@@ -191,14 +200,64 @@
     <Constant Identifier="cNameAcquireWayAverage" Type="string" Expression="'Average'"/>
     <Constant Identifier="cNameAcquireWayHighRes" Type="string" Expression="'HighRes'"/>
 
-    <Constant Identifier="cTrigAuto" Type="ViString" Expression="'AUTO'"/>
-    <Constant Identifier="cTrigNorm" Type="ViString" Expression="'NORM'"/>
-    <Constant Identifier="cTrigSingle" Type="ViString" Expression="'SINGLE'"/>
-    <Constant Identifier="cTrigStop" Type="ViString" Expression="'STOP'"/>
-    <Constant Identifier="cTrigQuery" Type="ViString" Expression="'TRIG_MODE?'"/>
-    <Constant Identifier="cTrigCommand" Type="ViString" Expression="'TRIG_MODE '"/>
-    <Constant Identifier="cWaveBlobSize" Type="UInt32" Expression="29360640"/>
-    <Constant Identifier="cScreenCapureBlobSize" Type="UInt32" Expression="1000000"/>
+    <Constant Identifier="cVidChannelTypeCH1" Type="ViString" Expression="'C1'"/>
+    <Constant Identifier="cVidChannelTypeCH2" Type="ViString" Expression="'C2'"/>
+    <Constant Identifier="cVidChannelTypeCH3" Type="ViString" Expression="'C3'"/>
+    <Constant Identifier="cVidChannelTypeCH4" Type="ViString" Expression="'C4'"/>
+    <Constant Identifier="cVidTraceTypeCH1" Type="ViString" Expression="'C1'"/>
+    <Constant Identifier="cVidTraceTypeCH2" Type="ViString" Expression="'C2'"/>
+    <Constant Identifier="cVidTraceTypeCH3" Type="ViString" Expression="'C3'"/>
+    <Constant Identifier="cVidTraceTypeCH4" Type="ViString" Expression="'C4'"/>
+    <Constant Identifier="cVidTraceTypeMath" Type="ViString" Expression="'MATH'"/>
+    <Constant Identifier="cVidTraceTypeD0" Type="ViString" Expression="'D0'"/>
+    <Constant Identifier="cVidTraceTypeD1" Type="ViString" Expression="'D1'"/>
+    <Constant Identifier="cVidTraceTypeD2" Type="ViString" Expression="'D2'"/>
+    <Constant Identifier="cVidTraceTypeD3" Type="ViString" Expression="'D3'"/>
+    <Constant Identifier="cVidTraceTypeD4" Type="ViString" Expression="'D4'"/>
+    <Constant Identifier="cVidTraceTypeD5" Type="ViString" Expression="'D5'"/>
+    <Constant Identifier="cVidTraceTypeD6" Type="ViString" Expression="'D6'"/>
+    <Constant Identifier="cVidTraceTypeD7" Type="ViString" Expression="'D7'"/>
+    <Constant Identifier="cVidTraceTypeD8" Type="ViString" Expression="'D8'"/>
+    <Constant Identifier="cVidTraceTypeD9" Type="ViString" Expression="'D9'"/>
+    <Constant Identifier="cVidTraceTypeD10" Type="ViString" Expression="'D10'"/>
+    <Constant Identifier="cVidTraceTypeD11" Type="ViString" Expression="'D11'"/>
+    <Constant Identifier="cVidTraceTypeD12" Type="ViString" Expression="'D12'"/>
+    <Constant Identifier="cVidTraceTypeD13" Type="ViString" Expression="'D13'"/>
+    <Constant Identifier="cVidTraceTypeD14" Type="ViString" Expression="'D14'"/>
+    <Constant Identifier="cVidTraceTypeD15" Type="ViString" Expression="'D15'"/>
+    <Constant Identifier="cVidTriggerModeAuto" Type="ViString" Expression="'AUTO'"/>
+    <Constant Identifier="cVidTriggerModeNormal" Type="ViString" Expression="'NORM'"/>
+    <Constant Identifier="cVidTriggerModeSingle" Type="ViString" Expression="'SINGLE'"/>
+    <Constant Identifier="cVidTriggerModeStop" Type="ViString" Expression="'STOP'"/>
+    <Constant Identifier="cVidMemSize7K" Type="ViString" Expression="'7K'"/>
+    <Constant Identifier="cVidMemSize14K" Type="ViString" Expression="'14K'"/>
+    <Constant Identifier="cVidMemSize70K" Type="ViString" Expression="'70K'"/>
+    <Constant Identifier="cVidMemSize140K" Type="ViString" Expression="'140K'"/>
+    <Constant Identifier="cVidMemSize700K" Type="ViString" Expression="'700K'"/>
+    <Constant Identifier="cVidMemSize1M4" Type="ViString" Expression="'1.4M'"/>
+    <Constant Identifier="cVidMemSize7M" Type="ViString" Expression="'7M'"/>
+    <Constant Identifier="cVidMemSize14M" Type="ViString" Expression="'14M'"/>
+    <Constant Identifier="cVidAvgTime4" Type="ViString" Expression="'4'"/>
+    <Constant Identifier="cVidAvgTime16" Type="ViString" Expression="'16'"/>
+    <Constant Identifier="cVidAvgTime32" Type="ViString" Expression="'32'"/>
+    <Constant Identifier="cVidAvgTime64" Type="ViString" Expression="'64'"/>
+    <Constant Identifier="cVidAvgTime128" Type="ViString" Expression="'128'"/>
+    <Constant Identifier="cVidAvgTime256" Type="ViString" Expression="'256'"/>
+    <Constant Identifier="cVidAvgTime512" Type="ViString" Expression="'512'"/>
+    <Constant Identifier="cVidAvgTime1024" Type="ViString" Expression="'1024'"/>
+    <Constant Identifier="cVidAcquireWayNormal" Type="ViString" Expression="'SAMPLING'"/>
+    <Constant Identifier="cVidAcquireWayPeakDetect" Type="ViString" Expression="'PEAK_DETECT'"/>
+    <Constant Identifier="cVidAcquireWayAverage" Type="ViString" Expression="'AVERAGE'"/>
+    <Constant Identifier="cVidAcquireWayHighRes" Type="ViString" Expression="'HIGH_RES'"/>
+    <Constant Identifier="cVidHeaderTypeOff" Type="ViString" Expression="'OFF'"/>
+    <Constant Identifier="cVidHeaderTypeShort" Type="ViString" Expression="'SHORT'"/>
+    <Constant Identifier="cVidHeaderTypeLong" Type="ViString" Expression="'LONG'"/>
+
+    <Constant Identifier="viSpace" Type="ViString" Expression="' '"/>
+    <Constant Identifier="viParamSep" Type="ViString" Expression="','"/>
+
+    <Constant Identifier="cTRIG_MODEQuery" Type="ViString" Expression="'TRIG_MODE?'"/>
+    <Constant Identifier="cTRIG_MODECommand" Type="ViString" Expression="'TRIG_MODE '"/>
     <Constant Identifier="cTIME_DIVQuery" Type="ViString" Expression="'TIME_DIV?'"/>
     <Constant Identifier="cTIME_DIVCommand" Type="ViString" Expression="'TIME_DIV '"/>
     <Constant Identifier="cMATH_VERT_DIVQuery" Type="ViString" Expression="'MATH_VERT_DIV?'"/>
@@ -226,18 +285,25 @@
     <Constant Identifier="cWAITCommandSpace" Type="ViString" Expression="'WAIT '"/>
     <Constant Identifier="cARMCommand" Type="ViString" Expression="'ARM'"/>
     <Constant Identifier="cINRQuery" Type="ViString" Expression="'INR?'"/>
-    <Constant Identifier="cACQUIRE_WAYCommand" Type="ViString" Expression="'ACQUIRE_WAY AVERAGE,'"/>
+    <Constant Identifier="cACQUIRE_WAYAverageCommand" Type="ViString" Expression="'ACQUIRE_WAY AVERAGE,'"/>
+    <Constant Identifier="cACQUIRE_WAYQuery" Type="ViString" Expression="'ACQUIRE_WAY?'"/>
+    <Constant Identifier="cACQUIRE_WAYCommand" Type="ViString" Expression="'ACQUIRE_WAY '"/>
     <Constant Identifier="cSCDPCommand" Type="ViString" Expression="'SCDP'"/>
-    <Constant Identifier="cTRAQuery" Type="ViString" Expression="':TRA?'"/>
-    <Constant Identifier="cTRACommand" Type="ViString" Expression="':TRA'"/>
+    <Constant Identifier="cTRACEQuery" Type="ViString" Expression="':TRACE?'"/>
+    <Constant Identifier="cTRACECommand" Type="ViString" Expression="':TRACE'"/>
     <Constant Identifier="cHISTORY_MODEQuery" Type="ViString" Expression="'HISTORY_MODE?'"/>
     <Constant Identifier="cHISTORY_MODECommand" Type="ViString" Expression="'HISTORY_MODE'"/>
     <Constant Identifier="cMEMORY_SIZEQuery" Type="ViString" Expression="'MEMORY_SIZE?'"/>
     <Constant Identifier="cMEMORY_SIZECommand" Type="ViString" Expression="'MEMORY_SIZE '"/>
-    <Constant Identifier="cWFSUTYPE1Command" Type="ViString" Expression="'WFSU TYPE,1'"/>
-    <Constant Identifier="cWFSUCommand" Type="ViString" Expression="'WFSU SP,%d,NP,%d,FP,%d,SN,%d'"/>
+    <Constant Identifier="cWAVEFORM_SETUPTYPE1Command" Type="ViString" Expression="'WAVEFORM_SETUP TYPE,1'"/>
+    <Constant Identifier="cWAVEFORM_SETUPCommand" Type="ViString" Expression="'WAVEFORM_SETUP SP,%d,NP,%d,FP,%d,SN,%d'"/>
     <Constant Identifier="cBANDWIDTH_LIMITQuery" Type="ViString" Expression="'BANDWIDTH_LIMIT?'"/>
     <Constant Identifier="cBANDWIDTH_LIMITCommand" Type="ViString" Expression="'BANDWIDTH_LIMIT '"/>
+    <Constant Identifier="cCHDRQuery" Type="ViString" Expression="'CHDR?'"/>
+    <Constant Identifier="cCHDRCommand" Type="ViString" Expression="'CHDR '"/>
+    <Constant Identifier="cWAVEFORMQuery" Type="ViString" Expression="':WAVEFORM? '"/>
+    <Constant Identifier="cWAVEFORM_DAT2" Type="ViString" Expression="'DAT2'"/>
+    <Constant Identifier="cWAVEFORM_ALL" Type="ViString" Expression="'ALL'"/>
   </Constants>
 
   <Variables>
@@ -252,18 +318,92 @@
 
     <Variable Identifier="ucAttenuation" Type="TUnitConvertor" Init="TUnitConvertor.Create(TGranularity.Micro, TSiUnit.None)"/>
 
-    <Variable Identifier="TraceTypeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"   />
-    <Variable Identifier="HWTraceTypeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64" />
-    <Variable Identifier="ChannelTypeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64" />
-    <Variable Identifier="TriggerModeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64" />
-    <Variable Identifier="MemSizeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"     />
-    <Variable Identifier="AvgTimeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"     />
-    <Variable Identifier="AcquireWayNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"  />
+    <Variable Identifier="TraceTypeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
+    <Variable Identifier="ChannelTypeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
+    <Variable Identifier="TriggerModeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
+    <Variable Identifier="MemSizeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
+    <Variable Identifier="AvgTimeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
+    <Variable Identifier="AcquireWayNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
+
+    <Variable Identifier="AcquireWayVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+    <Variable Identifier="AvgTimeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+    <Variable Identifier="ChannelTypeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+    <Variable Identifier="HeaderTypeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+    <Variable Identifier="MemSizeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+    <Variable Identifier="TraceTypeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+    <Variable Identifier="TriggerModeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
   </Variables>
 
   <Procedures>
+    <Function Identifier="TTSiglentScope.MatchingClass" Type="TTSiglentScope">
+      <Parameters>
+        <Parameter Identifier="VisaResource" Type="TVisaResource"/>
+      </Parameters>
+      <Block>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', cIDNQuery)" Condition="DoReportVisa"/>
+        <Execute Statement="VisaResource.AnsiWrite(cIDNQuery)"/>
+        <Variable Identifier="INR" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', INR)" Condition="DoReportVisa"/>
+        <Variable Identifier="Manufacturer" Type="ViString"/>
+        <Variable Identifier="Model" Type="ViString"/>
+        <Variable Identifier="Field3" Type="ViString"/>
+        <Variable Identifier="Field4" Type="ViString"/>
+        <Raise Expression="Exception.Create(sErrorCouldNotDetermineScope)" Condition="not DecodeINR(INR, Manufacturer, Model, Field3, Field4)"/>
+        <!--<rep:Reporter.Information Text="Format('Manufacturer: %s', Manufacturer)"/>
+        <rep:Reporter.Information Text="Format('Model: %s', Model)"/>
+        <rep:Reporter.Information Text="Format('Field3: %s', Field3)"/>
+        <rep:Reporter.Information Text="Format('Field4: %s', Field4)"/>-->
+        <Choose>
+          <When Expression="Manufacturer = 'Siglent Technologies'">
+            <Choose>
+              <When Expression="Model='SDS1204X-E'">
+                <Execute Statement="Result:= TSiglentSDS1204XE"/>
+              </When>
+              <When Expression="Model='SDS1104X-E'">
+                <Execute Statement="Result:= TSiglentSDS1104XE"/>
+              </When>
+              <When Expression="Model='SDS1202X-E'">
+                <Execute Statement="Result:= TSiglentSDS1202XE"/>
+              </When>
+              <When Expression="Model='SDS1102X-E'">
+                <Execute Statement="Result:= TSiglentSDS1102XE"/>
+              </When>
+              <Otherwise>
+                <Raise Expression="Exception.Create(sErrorUnknownScope + Model)"/>
+              </Otherwise>
+            </Choose>
+          </When>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorUnknownScope + Manufacturer + ' ' + Model)"/>
+          </Otherwise>
+        </Choose>
+      </Block>
+    </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.TraceChannel" Type="TChannelType" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.SupportsTrace" Type="Boolean" IsDeterministic="true" VirtualMethod="vmSupportsTrace">
+      <Parameters>
+        <Parameter Identifier="Trace" Type="TTraceType"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= True"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope2CH.SupportsTrace" Type="Boolean" IsDeterministic="true" VirtualMethod="vmSupportsTrace">
+      <Parameters>
+        <Parameter Identifier="Trace" Type="TTraceType"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= False"/>
+        <Case Expression="Trace" Optimalisation="integermapping">
+          <On Select="TTraceType.CH1, TTraceType.CH2">
+            <Execute Statement="Result:= True"/>
+          </On>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.TraceChannel" Type="TChannelType" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Trace" Type="TTraceType"/>
       </Parameters>
@@ -288,7 +428,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.ChannelTrace" Type="TTraceType" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.ChannelTrace" Type="TTraceType" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Channel" Type="TChannelType"/>
       </Parameters>
@@ -313,7 +453,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.ChannelTypeName" Type="string" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.ChannelTypeName" Type="string" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Value" Type="TChannelType"/>
       </Parameters>
@@ -338,7 +478,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.TraceTypeName" Type="string" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.TraceTypeName" Type="string" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Value" Type="TTraceType"/>
       </Parameters>
@@ -414,44 +554,23 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.HWTraceTypeName" Type="string" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.HWTraceTypeName" Type="string" IsDeterministic="true">
       <Parameters>
-        <Parameter Identifier="Value" Type="THWTraceType"/>
+        <Parameter Identifier="Value" Type="TTraceType"/>
       </Parameters>
       <Block>
         <Case Expression="Value" Optimalisation="integermapping">
-          <On Select="THWTraceType.CH1">
-            <Execute Statement="Result:= cNameHWTraceTypeCH1"/>
-          </On>
-          <On Select="THWTraceType.CH2">
-            <Execute Statement="Result:= cNameHWTraceTypeCH2"/>
-          </On>
-          <On Select="THWTraceType.CH3">
-            <Execute Statement="Result:= cNameHWTraceTypeCH3"/>
-          </On>
-          <On Select="THWTraceType.CH4">
-            <Execute Statement="Result:= cNameHWTraceTypeCH4"/>
-          </On>
-          <On Select="THWTraceType.TA">
-            <Execute Statement="Result:= cNameHWTraceTypeA"/>
-          </On>
-          <On Select="THWTraceType.TB">
-            <Execute Statement="Result:= cNameHWTraceTypeB"/>
-          </On>
-          <On Select="THWTraceType.TC">
-            <Execute Statement="Result:= cNameHWTraceTypeC"/>
-          </On>
-          <On Select="THWTraceType.TD">
-            <Execute Statement="Result:= cNameHWTraceTypeD"/>
+          <On Select="TTraceType.Math">
+            <Raise Expression="Exception.Create(sErrorInvalidHWTraceType)"/>
           </On>
           <Otherwise>
-            <Raise Expression="Exception.Create(sErrorInvalidHWTraceType)"/>
+            <Execute Statement="Result:= TraceTypeName(Value)"/>
           </Otherwise>
         </Case>
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.TriggerModeName" Type="string" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.TriggerModeName" Type="string" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Value" Type="TTriggerMode"/>
       </Parameters>
@@ -476,7 +595,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.MemSizeName" Type="string" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.MemSizeName" Type="string" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Value" Type="TMemSize"/>
       </Parameters>
@@ -513,7 +632,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.AvgTimeName" Type="string" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.AvgTimeName" Type="string" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Value" Type="TAvgTime"/>
       </Parameters>
@@ -550,7 +669,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.AcquireWayName" Type="string" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.AcquireWayName" Type="string" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Value" Type="TAcquireWay"/>
       </Parameters>
@@ -575,7 +694,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.TraceTypeFromName" Type="TTraceType" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.TraceTypeFromName" Type="TTraceType" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Name" Type="string"/>
       </Parameters>
@@ -592,24 +711,21 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.HWTraceTypeFromName" Type="THWTraceType" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.HWTraceTypeFromName" Type="TTraceType" IsDeterministic="true">
       <Parameters>
-        <Parameter Identifier="Name" Type="string"/>
+        <Parameter Identifier="Value" Type="string"/>
       </Parameters>
       <Block>
-        <Block Condition="IsEmpty(HWTraceTypeNameIndex)">
-          <Execute Statement="HWTraceTypeNameIndex:= TMappingCaseInSensitiveUnicodeStringToInt64.Create"/>
-          <ForLoop Indexer="I" From="THWTraceType.Low" To="THWTraceType.High">
-            <inx:Index.MapValue Index="HWTraceTypeNameIndex" Key="HWTraceTypeName(I)" Value="I"/>
-          </ForLoop>
-        </Block>
-        <Variable Identifier="Found" Type="Boolean"/>
-        <inx:Index.FindValue Index="HWTraceTypeNameIndex" Key="Name" Value="Result" Found="Found" Flags="NoErrorOnNotFound" />
-        <Raise Expression="Exception.Create(sErrorInvalidHWTraceType)" Condition="not Found"/>
+        <Execute Statement="Result:= TraceTypeFromName(Value)"/>
+        <Case Expression="Result">
+          <On Select="TTraceType.Math">
+            <Raise Expression="Exception.Create(sErrorInvalidHWTraceType)"/>
+          </On>
+        </Case>
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.ChannelTypeFromName" Type="TChannelType" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.ChannelTypeFromName" Type="TChannelType" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Name" Type="string"/>
       </Parameters>
@@ -626,7 +742,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.TriggerModeFromName" Type="TTriggerMode" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.TriggerModeFromName" Type="TTriggerMode" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Name" Type="string"/>
       </Parameters>
@@ -643,7 +759,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.MemSizeFromName" Type="TMemSize" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.MemSizeFromName" Type="TMemSize" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Name" Type="string"/>
       </Parameters>
@@ -660,7 +776,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.AvgTimeFromName" Type="TAvgTime" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.AvgTimeFromName" Type="TAvgTime" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Name" Type="string"/>
       </Parameters>
@@ -677,7 +793,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TTSiglentSDS1104X.AcquireWayFromName" Type="TAcquireWay" IsDeterministic="true">
+    <Function Identifier="TTSiglentScope.AcquireWayFromName" Type="TAcquireWay" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Name" Type="string"/>
       </Parameters>
@@ -694,322 +810,454 @@
       </Block>
     </Function>
 
-    <Property Identifier="TSiglentSDS1104X.CommHeader" Type="THeaderType">
-      <Getter>
-        <Variable Identifier="ValueS" Type="ViString" Init="QueryString('CHDR?')"/>
-        <Choose>
-          <When Expression="ValueS = 'OFF'">
-            <Execute Statement="Result:= THeaderType.Off"/>
-          </When>
-          <When Expression="ValueS = 'CHDR SHORT'">
-            <Execute Statement="Result:= THeaderType.Short"/>
-          </When>
-          <When Expression="ValueS = 'CHDR LONG'">
-            <Execute Statement="Result:= THeaderType.Long"/>
-          </When>
-          <Otherwise>
-            <Raise Expression="Exception.Create(sErrorUnexpectedHeader)"/>
-          </Otherwise>
-        </Choose>
-      </Getter>
-      <Setter>
-        <Case Expression="Value">
-          <On Select="THeaderType.Off">
-            <Execute Statement="WriteString('CHDR OFF')"/>
-          </On>
-          <On Select="THeaderType.Short">
-            <Execute Statement="WriteString('CHDR SHORT')"/>
-          </On>
-          <On Select="THeaderType.Long">
-            <Execute Statement="WriteString('CHDR LONG')"/>
-          </On>
-          <Otherwise>
-            <Raise Expression="Exception.Create(sErrorUnsupportedHeader)"/>
-          </Otherwise>
-        </Case>
-      </Setter>
-    </Property>
-
-    <Property Identifier="TSiglentSDS1104X.AcquireWay" Type="TAcquireWay" >
-      <Getter>
-        <Variable Identifier="ValueS" Type="ViString" Init="QueryString('ACQUIRE_WAY?')"/>
-        <Choose>
-          <When Expression="ValueS = 'SAMPLING'">
-            <Execute Statement="Result:= TAcquireWay.Normal"/>
-          </When>
-          <When Expression="ValueS = 'PEAK_DETECT'">
-            <Execute Statement="Result:= TAcquireWay.PeakDetect"/>
-          </When>
-          <When Expression="ValueS = 'AVERAGE'">
-            <Execute Statement="Result:= TAcquireWay.Average"/>
-          </When>
-          <When Expression="ValueS = 'HIGH_RES'">
-            <Execute Statement="Result:= TAcquireWay.HighRes"/>
-          </When>
-          <Otherwise>
-            <Raise Expression="Exception.Create(sErrorUnexpectedAcquireWay)"/>
-          </Otherwise>
-        </Choose>
-      </Getter>
-      <Setter>
-        <Case Expression="Value">
+    <Function Identifier="TTSiglentScope.AcquireWayVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TAcquireWay"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
           <On Select="TAcquireWay.Normal">
-            <Execute Statement="WriteString('ACQUIRE_WAY SAMPLING')"/>
+            <Execute Statement="Result:= cVidAcquireWayNormal"/>
           </On>
           <On Select="TAcquireWay.PeakDetect">
-            <Execute Statement="WriteString('ACQUIRE_WAY PEAK_DETECT')"/>
+            <Execute Statement="Result:= cVidAcquireWayPeakDetect"/>
           </On>
           <On Select="TAcquireWay.Average">
-            <Execute Statement="WriteString('ACQUIRE_WAY AVERAGE')"/>
+            <Execute Statement="Result:= cVidAcquireWayAverage"/>
           </On>
           <On Select="TAcquireWay.HighRes">
-            <Execute Statement="WriteString('ACQUIRE_WAY HIGH_RES')"/>
+            <Execute Statement="Result:= cVidAcquireWayHighRes"/>
           </On>
           <Otherwise>
-            <Raise Expression="Exception.Create(sErrorUnsupportedAcquireWay)"/>
+            <Raise Expression="Exception.Create(sErrorInvalidAcquireWay)"/>
           </Otherwise>
         </Case>
-      </Setter>
-    </Property>
+      </Block>
+    </Function>
 
-    <Property Identifier="TSiglentSDS1104X.ChannelID" Type="ViString">
+    <Function Identifier="TTSiglentScope.AvgTimeVid" Type="ViString" IsDeterministic="true">
       <Parameters>
-        <Parameter Identifier="Channel" Type="TChannelType"/>
+        <Parameter Identifier="Value" Type="TAvgTime"/>
       </Parameters>
-      <Getter>
-        <Case Expression="Channel">
-          <On Select="TChannelType.CH1">
-            <Execute Statement="Result:= cCH1"/>
-          </On>
-          <On Select="TChannelType.CH2">
-            <Execute Statement="Result:= cCH2"/>
-          </On>
-          <On Select="TChannelType.CH3">
-            <Execute Statement="Result:= cCH3"/>
-          </On>
-          <On Select="TChannelType.CH4">
-            <Execute Statement="Result:= cCH4"/>
-          </On>
-          <Otherwise>
-            <Raise Expression="Exception.Create(sErrorInvalidChannel)"/>
-          </Otherwise>
-        </Case>
-      </Getter>
-    </Property>
-
-    <Property Identifier="TSiglentSDS1104X.TraceID" Type="ViString" >
-      <Parameters>
-        <Parameter Identifier="Trace" Type="TTraceType"/>
-      </Parameters>
-      <Getter>
-        <Case Expression="Trace">
-          <On Select="TTraceType.CH1..TTraceType.CH4">
-            <Execute Statement="Result:= ViFormat('C%d', Trace - TTraceType.CH1 + 1)"/>
-          </On>
-          <On Select="TTraceType.Math">
-            <Execute Statement="Result:= 'MATH'"/>
-          </On>
-          <On Select="TTraceType.D0..TTraceType.D15">
-            <Execute Statement="Result:= ViFormat('D%d', Trace - TTraceType.D0)"/>
-          </On>
-          <Otherwise>
-            <Raise Expression="Exception.Create(sErrorInvalidTraceType)"/>
-          </Otherwise>
-        </Case>
-      </Getter>
-    </Property>
-
-    <Property Identifier="TSiglentSDS1104X.TriggerName" Type="ViString" >
-      <Parameters>
-        <Parameter Identifier="TriggerMode" Type="TTriggerMode"/>
-      </Parameters>
-      <Getter>
-        <Case Expression="TriggerMode" Optimalisation="integermapping">
-          <On Select="TTriggerMode.Auto">
-            <Execute Statement="Result:= cTrigAuto"/>
-          </On>
-          <On Select="TTriggerMode.Normal">
-            <Execute Statement="Result:= cTrigNorm"/>
-          </On>
-          <On Select="TTriggerMode.Single">
-            <Execute Statement="Result:= cTrigSingle"/>
-          </On>
-          <On Select="TTriggerMode.Stop">
-            <Execute Statement="Result:= cTrigStop"/>
-          </On>
-          <Otherwise>
-            <Raise Expression="Exception.Create(sErrorInvalidTriggerMode)"/>
-          </Otherwise>
-        </Case>
-      </Getter>
-    </Property>
-
-    <Property Identifier="TSiglentSDS1104X.TriggerType" Type="TTriggerMode" >
-      <Parameters>
-        <Parameter Identifier="TriggerS" Type="ViString"/>
-      </Parameters>
-      <Getter>
-        <Choose>
-          <When Expression="TriggerS = cTrigAuto">
-            <Execute Statement="Result:= TTriggerMode.Auto"/>
-          </When>
-          <When Expression="TriggerS = cTrigNorm">
-            <Execute Statement="Result:= TTriggerMode.Normal"/>
-          </When>
-          <When Expression="TriggerS = cTrigSingle">
-            <Execute Statement="Result:= TTriggerMode.Single"/>
-          </When>
-          <When Expression="TriggerS = cTrigStop">
-            <Execute Statement="Result:= TTriggerMode.Stop"/>
-          </When>
-          <Otherwise>
-            <Raise Expression="Exception.Create(sErrorInvalidTriggerMode)"/>
-          </Otherwise>
-        </Choose>
-      </Getter>
-    </Property>
-
-    <Property Identifier="TSiglentSDS1104X.HWTraceID" Type="ViString" >
-      <Parameters>
-        <Parameter Identifier="Trace" Type="THWTraceType"/>
-      </Parameters>
-      <Getter>
-        <Case Expression="Trace" Optimalisation="integermapping">
-          <On Select="THWTraceType.CH1..THWTraceType.CH4">
-            <Execute Statement="Result:= ViFormat('C%d', Trace - THWTraceType.CH1 + 1)"/>
-          </On>
-          <On Select="THWTraceType.TA">
-            <Execute Statement="Result:= 'TA'"/>
-          </On>
-          <On Select="THWTraceType.TB">
-            <Execute Statement="Result:= 'TB'"/>
-          </On>
-          <On Select="THWTraceType.TC">
-            <Execute Statement="Result:= 'TC'"/>
-          </On>
-          <On Select="THWTraceType.TD">
-            <Execute Statement="Result:= 'TD'"/>
-          </On>
-          <Otherwise>
-            <Raise Expression="Exception.Create(sErrorInvalidHWTraceType)"/>
-          </Otherwise>
-        </Case>
-      </Getter>
-    </Property>
-
-    <Property Identifier="TSiglentSDS1104X.AvgTime" Type="ViString" >
-      <Parameters>
-        <Parameter Identifier="Time" Type="TAvgTime"/>
-      </Parameters>
-      <Getter>
-        <Case Expression="Time" Optimalisation="integermapping">
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
           <On Select="TAvgTime.avg4">
-            <Execute Statement="Result:= '4'"/>
+            <Execute Statement="Result:= cVidAvgTime4"/>
           </On>
           <On Select="TAvgTime.avg16">
-            <Execute Statement="Result:= '16'"/>
+            <Execute Statement="Result:= cVidAvgTime16"/>
           </On>
           <On Select="TAvgTime.avg32">
-            <Execute Statement="Result:= '32'"/>
+            <Execute Statement="Result:= cVidAvgTime32"/>
           </On>
           <On Select="TAvgTime.avg64">
-            <Execute Statement="Result:= '64'"/>
+            <Execute Statement="Result:= cVidAvgTime64"/>
           </On>
           <On Select="TAvgTime.avg128">
-            <Execute Statement="Result:= '128'"/>
+            <Execute Statement="Result:= cVidAvgTime128"/>
           </On>
           <On Select="TAvgTime.avg256">
-            <Execute Statement="Result:= '256'"/>
+            <Execute Statement="Result:= cVidAvgTime256"/>
           </On>
           <On Select="TAvgTime.avg512">
-            <Execute Statement="Result:= '512'"/>
+            <Execute Statement="Result:= cVidAvgTime512"/>
           </On>
           <On Select="TAvgTime.avg1024">
-            <Execute Statement="Result:= '1024'"/>
+            <Execute Statement="Result:= cVidAvgTime1024"/>
           </On>
           <Otherwise>
             <Raise Expression="Exception.Create(sErrorInvalidAvgTime)"/>
           </Otherwise>
         </Case>
-      </Getter>
-    </Property>
+      </Block>
+    </Function>
 
-    <Property Identifier="TSiglentSDS1104X.MemorySize" Type="TMemSize" >
-      <Getter>
-        <Variable Identifier="ValueS" Type="ViString" Init="QueryString(cMEMORY_SIZEQuery)"/>
-        <Choose>
-          <When Expression="ValueS = '7K'">
-            <Execute Statement="Result:= TMemSize.ms7K"/>
-          </When>
-          <When Expression="ValueS = '14K'">
-            <Execute Statement="Result:= TMemSize.ms14K"/>
-          </When>
-          <When Expression="ValueS = '70K'">
-            <Execute Statement="Result:= TMemSize.ms70K"/>
-          </When>
-          <When Expression="ValueS = '140K'">
-            <Execute Statement="Result:= TMemSize.ms140K"/>
-          </When>
-          <When Expression="ValueS = '700K'">
-            <Execute Statement="Result:= TMemSize.ms700K"/>
-          </When>
-          <When Expression="ValueS = '1.4M'">
-            <Execute Statement="Result:= TMemSize.ms1M4"/>
-          </When>
-          <When Expression="ValueS = '7M'">
-            <Execute Statement="Result:= TMemSize.ms7M"/>
-          </When>
-          <When Expression="ValueS = '14M'">
-            <Execute Statement="Result:= TMemSize.ms14M"/>
-          </When>
+    <Function Identifier="TTSiglentScope.ChannelTypeVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TChannelType"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TChannelType.CH1">
+            <Execute Statement="Result:= cVidChannelTypeCH1"/>
+          </On>
+          <On Select="TChannelType.CH2">
+            <Execute Statement="Result:= cVidChannelTypeCH2"/>
+          </On>
+          <On Select="TChannelType.CH3">
+            <Execute Statement="Result:= cVidChannelTypeCH3"/>
+          </On>
+          <On Select="TChannelType.CH4">
+            <Execute Statement="Result:= cVidChannelTypeCH4"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidChannelType)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.HeaderTypeVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="THeaderType"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="THeaderType.Off">
+            <Execute Statement="Result:= cVidHeaderTypeOff"/>
+          </On>
+          <On Select="THeaderType.Short">
+            <Execute Statement="Result:= cVidHeaderTypeShort"/>
+          </On>
+          <On Select="THeaderType.Long">
+            <Execute Statement="Result:= cVidHeaderTypeLong"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidHeaderType)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.MemSizeVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TMemSize"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TMemSize.ms7K">
+            <Execute Statement="Result:= cVidMemSize7K"/>
+          </On>
+          <On Select="TMemSize.ms14K">
+            <Execute Statement="Result:= cVidMemSize14K"/>
+          </On>
+          <On Select="TMemSize.ms70K">
+            <Execute Statement="Result:= cVidMemSize70K"/>
+          </On>
+          <On Select="TMemSize.ms140K">
+            <Execute Statement="Result:= cVidMemSize140K"/>
+          </On>
+          <On Select="TMemSize.ms700K">
+            <Execute Statement="Result:= cVidMemSize700K"/>
+          </On>
+          <On Select="TMemSize.ms1M4">
+            <Execute Statement="Result:= cVidMemSize1M4"/>
+          </On>
+          <On Select="TMemSize.ms7M">
+            <Execute Statement="Result:= cVidMemSize7M"/>
+          </On>
+          <On Select="TMemSize.ms14M">
+            <Execute Statement="Result:= cVidMemSize14M"/>
+          </On>
           <Otherwise>
             <Raise Expression="Exception.Create(sErrorInvalidMemSize)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.TraceTypeVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TTraceType"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TTraceType.CH1">
+            <Execute Statement="Result:= cVidTraceTypeCH1"/>
+          </On>
+          <On Select="TTraceType.CH2">
+            <Execute Statement="Result:= cVidTraceTypeCH2"/>
+          </On>
+          <On Select="TTraceType.CH3">
+            <Execute Statement="Result:= cVidTraceTypeCH3"/>
+          </On>
+          <On Select="TTraceType.CH4">
+            <Execute Statement="Result:= cVidTraceTypeCH4"/>
+          </On>
+          <On Select="TTraceType.Math">
+            <Execute Statement="Result:= cVidTraceTypeMath"/>
+          </On>
+          <On Select="TTraceType.D0">
+            <Execute Statement="Result:= cVidTraceTypeD0"/>
+          </On>
+          <On Select="TTraceType.D1">
+            <Execute Statement="Result:= cVidTraceTypeD1"/>
+          </On>
+          <On Select="TTraceType.D2">
+            <Execute Statement="Result:= cVidTraceTypeD2"/>
+          </On>
+          <On Select="TTraceType.D3">
+            <Execute Statement="Result:= cVidTraceTypeD3"/>
+          </On>
+          <On Select="TTraceType.D4">
+            <Execute Statement="Result:= cVidTraceTypeD4"/>
+          </On>
+          <On Select="TTraceType.D5">
+            <Execute Statement="Result:= cVidTraceTypeD5"/>
+          </On>
+          <On Select="TTraceType.D6">
+            <Execute Statement="Result:= cVidTraceTypeD6"/>
+          </On>
+          <On Select="TTraceType.D7">
+            <Execute Statement="Result:= cVidTraceTypeD7"/>
+          </On>
+          <On Select="TTraceType.D8">
+            <Execute Statement="Result:= cVidTraceTypeD8"/>
+          </On>
+          <On Select="TTraceType.D9">
+            <Execute Statement="Result:= cVidTraceTypeD9"/>
+          </On>
+          <On Select="TTraceType.D10">
+            <Execute Statement="Result:= cVidTraceTypeD10"/>
+          </On>
+          <On Select="TTraceType.D11">
+            <Execute Statement="Result:= cVidTraceTypeD11"/>
+          </On>
+          <On Select="TTraceType.D12">
+            <Execute Statement="Result:= cVidTraceTypeD12"/>
+          </On>
+          <On Select="TTraceType.D13">
+            <Execute Statement="Result:= cVidTraceTypeD13"/>
+          </On>
+          <On Select="TTraceType.D14">
+            <Execute Statement="Result:= cVidTraceTypeD14"/>
+          </On>
+          <On Select="TTraceType.D15">
+            <Execute Statement="Result:= cVidTraceTypeD15"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidTraceType)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.HWTraceTypeVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TTraceType"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TTraceType.Math">
+            <Raise Expression="Exception.Create(sErrorInvalidHWTraceType)"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="Result:= TraceTypeVid(Value)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.TriggerModeVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TTriggerMode"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TTriggerMode.Auto">
+            <Execute Statement="Result:= cVidTriggerModeAuto"/>
+          </On>
+          <On Select="TTriggerMode.Normal">
+            <Execute Statement="Result:= cVidTriggerModeNormal"/>
+          </On>
+          <On Select="TTriggerMode.Single">
+            <Execute Statement="Result:= cVidTriggerModeSingle"/>
+          </On>
+          <On Select="TTriggerMode.Stop">
+            <Execute Statement="Result:= cVidTriggerModeStop"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidTriggerMode)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.AcquireWayFromVid" Type="TAcquireWay" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(AcquireWayVidIndex)">
+          <Execute Statement="AcquireWayVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TAcquireWay.Low" To="TAcquireWay.High">
+            <inx:Index.MapValue Index="AcquireWayVidIndex" Key="AcquireWayVid(I)" Value="I"/>
+          </ForLoop>
+          <Variable Identifier="Found" Type="Boolean"/>
+          <inx:Index.FindValue Index="AcquireWayVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+          <Raise Expression="Exception.Create(sErrorInvalidAcquireWay)" Condition="not Found"/>
+        </Block>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.AvgTimeFromVid" Type="TAvgTime" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(AvgTimeVidIndex)">
+          <Execute Statement="AvgTimeVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TAvgTime.Low" To="TAvgTime.High">
+            <inx:Index.MapValue Index="AvgTimeVidIndex" Key="AvgTimeVid(I)" Value="I"/>
+          </ForLoop>
+          <Variable Identifier="Found" Type="Boolean"/>
+          <inx:Index.FindValue Index="AvgTimeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+          <Raise Expression="Exception.Create(sErrorInvalidAvgTime)" Condition="not Found"/>
+        </Block>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.ChannelTypeFromVid" Type="TChannelType" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(ChannelTypeVidIndex)">
+          <Execute Statement="ChannelTypeVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TChannelType.Low" To="TChannelType.High">
+            <inx:Index.MapValue Index="ChannelTypeVidIndex" Key="ChannelTypeVid(I)" Value="I"/>
+          </ForLoop>
+          <Variable Identifier="Found" Type="Boolean"/>
+          <inx:Index.FindValue Index="ChannelTypeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+          <Raise Expression="Exception.Create(sErrorInvalidChannelType)" Condition="not Found"/>
+        </Block>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.HeaderTypeFromVid" Type="THeaderType" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(HeaderTypeVidIndex)">
+          <Execute Statement="HeaderTypeVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="THeaderType.Low" To="THeaderType.High">
+            <inx:Index.MapValue Index="HeaderTypeVidIndex" Key="HeaderTypeVid(I)" Value="I"/>
+          </ForLoop>
+          <Variable Identifier="Found" Type="Boolean"/>
+          <inx:Index.FindValue Index="HeaderTypeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+          <Raise Expression="Exception.Create(sErrorInvalidHeaderType)" Condition="not Found"/>
+        </Block>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.MemSizeFromVid" Type="TMemSize" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(MemSizeVidIndex)">
+          <Execute Statement="MemSizeVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TMemSize.Low" To="TMemSize.High">
+            <inx:Index.MapValue Index="MemSizeVidIndex" Key="MemSizeVid(I)" Value="I"/>
+          </ForLoop>
+          <Variable Identifier="Found" Type="Boolean"/>
+          <inx:Index.FindValue Index="MemSizeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+          <Raise Expression="Exception.Create(sErrorInvalidMemSize)" Condition="not Found"/>
+        </Block>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.TraceTypeFromVid" Type="TTraceType" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(TraceTypeVidIndex)">
+          <Execute Statement="TraceTypeVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TTraceType.Low" To="TTraceType.High">
+            <inx:Index.MapValue Index="TraceTypeVidIndex" Key="TraceTypeVid(I)" Value="I"/>
+          </ForLoop>
+          <Variable Identifier="Found" Type="Boolean"/>
+          <inx:Index.FindValue Index="TraceTypeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+          <Raise Expression="Exception.Create(sErrorInvalidTraceType)" Condition="not Found"/>
+        </Block>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.HWTraceTypeFromVid" Type="TTraceType" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= TraceTypeFromVid(Value)"/>
+        <Case Expression="Result">
+          <On Select="TTraceType.Math">
+            <Raise Expression="Exception.Create(sErrorInvalidHWTraceType)"/>
+          </On>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.TriggerModeFromVid" Type="TTriggerMode" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(TriggerModeVidIndex)">
+          <Execute Statement="TriggerModeVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TTriggerMode.Low" To="TTriggerMode.High">
+            <inx:Index.MapValue Index="TriggerModeVidIndex" Key="TriggerModeVid(I)" Value="I"/>
+          </ForLoop>
+          <Variable Identifier="Found" Type="Boolean"/>
+          <inx:Index.FindValue Index="TriggerModeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+          <Raise Expression="Exception.Create(sErrorInvalidTriggerMode)" Condition="not Found"/>
+        </Block>
+      </Block>
+    </Function>
+
+    <Property Identifier="TSiglentScope.CommHeader" Type="THeaderType">
+      <Getter>
+        <Variable Identifier="ValueS" Type="ViString" Init="QueryString(cCHDRQuery)"/>
+        <Choose>
+          <When Expression="ValueS = cVidHeaderTypeOff">
+            <Execute Statement="Result:= THeaderType.Off"/>
+          </When>
+          <When Expression="ValueS = cCHDRCommand + cVidHeaderTypeShort">
+            <Execute Statement="Result:= THeaderType.Short"/>
+          </When>
+          <When Expression="ValueS = cCHDRCommand + cVidHeaderTypeLong">
+            <Execute Statement="Result:= THeaderType.Long"/>
+          </When>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidHeaderType)"/>
           </Otherwise>
         </Choose>
       </Getter>
       <Setter>
-        <Variable Identifier="ValueS" Type="ViString"/>
-        <Case Expression="Value" Optimalisation="integermapping">
-          <On Select="TMemSize.ms7K">
-            <Execute Statement="ValueS:= '7K'"/>
-          </On>
-          <On Select="TMemSize.ms14K">
-            <Execute Statement="ValueS:= '14K'"/>
-          </On>
-          <On Select="TMemSize.ms70K">
-            <Execute Statement="ValueS:= '70K'"/>
-          </On>
-          <On Select="TMemSize.ms140K">
-            <Execute Statement="ValueS:= '140K'"/>
-          </On>
-          <On Select="TMemSize.ms1M4">
-            <Execute Statement="ValueS:= '1.4M'"/>
-          </On>
-          <On Select="TMemSize.ms7M">
-            <Execute Statement="ValueS:= '7M'"/>
-          </On>
-          <On Select="TMemSize.ms14M">
-            <Execute Statement="ValueS:= '14M'"/>
-          </On>
-          <Otherwise>
-            <Raise Expression="Exception.Create(sErrorUnsupportedMemSize)"/>
-          </Otherwise>
-        </Case>
-        <Execute Statement="WriteString(cMEMORY_SIZECommand + ValueS)"/>
+        <Execute Statement="WriteString(cCHDRCommand + HeaderTypeVid(Value))"/>
       </Setter>
     </Property>
 
-    <Procedure Identifier="TSiglentSDS1104X.SetTrigger">
+    <Property Identifier="TSiglentScope.AcquireWay" Type="TAcquireWay" >
+      <Getter>
+        <Execute Statement="Result:= AcquireWayFromVid(QueryString(cACQUIRE_WAYQuery))"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(cACQUIRE_WAYCommand + AcquireWayVid(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentScope.MemorySize" Type="TMemSize" >
+      <Getter>
+        <Execute Statement="Result:= MemSizeFromVid(QueryString(cMEMORY_SIZEQuery))"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(cMEMORY_SIZECommand + MemSizeVid(Value))"/>
+      </Setter>
+    </Property>
+
+    <Procedure Identifier="TSiglentScope.SetTrigger">
       <Parameters>
         <Parameter Identifier="Channel" Type="TChannelType"/>
         <Parameter Identifier="Value" Type="Extended"/>
       </Parameters>
       <Block>
-        <Execute Statement="WriteString(ChannelID[Channel] + cChannelTRIG_LEVELCommand + FloatToCode(Value))"/>
+        <Execute Statement="WriteString(ChannelTypeVid(Channel) + cChannelTRIG_LEVELCommand + FloatToCode(Value))"/>
       </Block>
     </Procedure>
 
-    <Property Identifier="TSiglentSDS1104X.TriggerSelect" Type="ViString">
+    <Property Identifier="TSiglentScope.TriggerSelect" Type="ViString">
       <Getter>
         <Execute Statement="Result:= QueryString(cTRIG_SELECTQuery)"/>
       </Getter>
@@ -1018,7 +1266,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.TriggerPattern" Type="ViString">
+    <Property Identifier="TSiglentScope.TriggerPattern" Type="ViString">
       <Getter>
         <Execute Statement="Result:= QueryString(cTRIG_PATTERNQuery)"/>
       </Getter>
@@ -1028,20 +1276,20 @@
     </Property>
 
 
-    <Property Identifier="TSiglentSDS1104X.Enabled" Type="Boolean">
+    <Property Identifier="TSiglentScope.Enabled" Type="Boolean">
       <Parameters>
-        <Parameter Identifier="HWTraceType" Type="THWTraceType"/>
+        <Parameter Identifier="HWTraceType" Type="TTraceType"/>
       </Parameters>
       <Getter>
-        <Execute Statement="WriteString(HWTraceID[HWTraceType] + cTRAQuery)"/>
+        <Execute Statement="WriteString(HWTraceTypeVid(HWTraceType) + cTRACEQuery)"/>
         <Execute Statement="Result:= ReadOnOff"/>
       </Getter>
       <Setter>
-        <Execute Statement="WriteOnOff(HWTraceID[HWTraceType] + cTRACommand, Value)"/>
+        <Execute Statement="WriteOnOff(HWTraceTypeVid(HWTraceType) + cTRACECommand, Value)"/>
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.BandwidthLimit" Type="Boolean">
+    <Property Identifier="TSiglentScope.BandwidthLimit" Type="Boolean">
       <Parameters>
         <Parameter Identifier="Channel" Type="TChannelType"/>
       </Parameters>
@@ -1159,11 +1407,11 @@
         <Raise Expression="Exception.Create(sErrorUnsupportedBandWidthAnswer + RetValue)" Condition="not ValidEndstate"/>
       </Getter>
       <Setter>
-        <Execute Statement="WriteOnOff(cBANDWIDTH_LIMITCommand + ChannelID[Channel] + viParamSep, Value)"/>
+        <Execute Statement="WriteOnOff(cBANDWIDTH_LIMITCommand + ChannelTypeVid(Channel) + viParamSep, Value)"/>
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.HistoryMode" Type="Boolean">
+    <Property Identifier="TSiglentScope.HistoryMode" Type="Boolean">
       <Getter>
         <Execute Statement="WriteString(cHISTORY_MODEQuery)"/>
         <Execute Statement="Result:= ReadOnOff"/>
@@ -1173,7 +1421,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.SequenceMode" Type="Boolean">
+    <Property Identifier="TSiglentScope.SequenceMode" Type="Boolean">
       <Getter>
         <Execute Statement="WriteString('ACquire_SeQuence_Mode')"/>
         <Execute Statement="Result:= ReadOnOff"/>
@@ -1184,7 +1432,7 @@
     </Property>
 
 
-    <Property Identifier="TSiglentSDS1104X.ActiveFrame" Type="UInt32" >
+    <Property Identifier="TSiglentScope.ActiveFrame" Type="UInt32" >
       <Getter>
         <Execute Statement="WriteString('FRAME_SET?')"/>
         <Execute Statement="Result:= ReadInt64"/>
@@ -1194,7 +1442,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.SegmentCount" Type="UInt32" >
+    <Property Identifier="TSiglentScope.SegmentCount" Type="UInt32" >
       <Getter>
         <Execute Statement="WriteString('ACquire_SeQuence_Seg?')"/>
         <Execute Statement="Result:= ReadInt64"/>
@@ -1204,16 +1452,16 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.TriggerMode" Type="TTriggerMode" >
+    <Property Identifier="TSiglentScope.TriggerMode" Type="TTriggerMode" >
       <Getter>
-        <Execute Statement="Result:= TriggerType[QueryString(cTrigQuery)]"/>
+        <Execute Statement="Result:= TriggerModeFromVid(QueryString(cTRIG_MODEQuery))"/>
       </Getter>
       <Setter>
-        <Execute Statement="WriteString(cTrigCommand + TriggerName[Value])"/>
+        <Execute Statement="WriteString(cTRIG_MODECommand + TriggerModeVid(Value))"/>
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.MathVDiv" Type="Extended" >
+    <Property Identifier="TSiglentScope.MathVDiv" Type="Extended" >
       <Getter>
         <Execute Statement="Result:= QueryFloat(cMATH_VERT_DIVQuery)"/>
       </Getter>
@@ -1222,7 +1470,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.ConvMathVDiv" Type="ConvInt" >
+    <Property Identifier="TSiglentScope.ConvMathVDiv" Type="ConvInt" >
       <Getter>
         <Execute Statement="Result:= QueryConvInt(cMATH_VERT_DIVQuery, ucMathVDiv)"/>
       </Getter>
@@ -1231,7 +1479,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.MathVPosition" Type="Extended" >
+    <Property Identifier="TSiglentScope.MathVPosition" Type="Extended" >
       <Getter>
         <Execute Statement="Result:= QueryFloat(cMATH_VERT_POSQuery)"/>
       </Getter>
@@ -1240,7 +1488,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.ConvMathVPosition" Type="ConvInt" >
+    <Property Identifier="TSiglentScope.ConvMathVPosition" Type="ConvInt" >
       <Getter>
         <Execute Statement="Result:= QueryConvInt(cMATH_VERT_POSQuery, ucMathVPosition)"/>
       </Getter>
@@ -1249,7 +1497,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.TriggerDelay" Type="Extended" >
+    <Property Identifier="TSiglentScope.TriggerDelay" Type="Extended" >
       <Getter>
         <Execute Statement="Result:= QueryFloat(cTRIG_DELAYQuery)"/>
       </Getter>
@@ -1258,7 +1506,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.ConvTriggerDelay" Type="ConvInt" >
+    <Property Identifier="TSiglentScope.ConvTriggerDelay" Type="ConvInt" >
       <Getter>
         <Execute Statement="Result:= QueryConvInt(cTRIG_DELAYQuery, ucTriggerDelay)"/>
       </Getter>
@@ -1267,7 +1515,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.TriggerLevel" Type="Extended" >
+    <Property Identifier="TSiglentScope.TriggerLevel" Type="Extended" >
       <Getter>
         <Execute Statement="Result:= QueryFloat(cTRIG_LEVELQuery)"/>
       </Getter>
@@ -1276,7 +1524,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.ConvTriggerLevel" Type="ConvInt" >
+    <Property Identifier="TSiglentScope.ConvTriggerLevel" Type="ConvInt" >
       <Getter>
         <Execute Statement="Result:= QueryConvInt(cTRIG_LEVELQuery, ucTriggerLevel)"/>
       </Getter>
@@ -1285,7 +1533,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.TDiv" Type="Extended" >
+    <Property Identifier="TSiglentScope.TDiv" Type="Extended" >
       <Getter>
         <Variable Identifier="ValueS" Type="ViString" Init="QueryString(cTIME_DIVQuery)"/>
         <Execute Statement="Result:= CodeToFloat(ValueS)"/>
@@ -1295,7 +1543,7 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.ConvTDiv" Type="ConvInt" >
+    <Property Identifier="TSiglentScope.ConvTDiv" Type="ConvInt" >
       <Getter>
         <Execute Statement="Result:= QueryConvInt(cTIME_DIVQuery, ucTDiv)"/>
       </Getter>
@@ -1304,86 +1552,86 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.VDiv" Type="Extended" >
+    <Property Identifier="TSiglentScope.VDiv" Type="Extended" >
       <Parameters>
         <Parameter Identifier="Channel" Type="TChannelType"/>
       </Parameters>
       <Getter>
-        <Execute Statement="Result:= QueryFloat(ChannelID[Channel] + cVOLT_DIVQuery)"/>
+        <Execute Statement="Result:= QueryFloat(ChannelTypeVid(Channel) + cVOLT_DIVQuery)"/>
       </Getter>
       <Setter>
-        <Execute Statement="WriteString(ChannelID[Channel] + cVOLT_DIVCommand + FloatToCode(Value))"/>
+        <Execute Statement="WriteString(ChannelTypeVid(Channel) + cVOLT_DIVCommand + FloatToCode(Value))"/>
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.ConvVDiv" Type="ConvInt" >
+    <Property Identifier="TSiglentScope.ConvVDiv" Type="ConvInt" >
       <Parameters>
         <Parameter Identifier="Channel" Type="TChannelType"/>
       </Parameters>
       <Getter>
-        <Execute Statement="Result:= QueryConvInt(ChannelID[Channel] + cVOLT_DIVQuery, ucVDiv)"/>
+        <Execute Statement="Result:= QueryConvInt(ChannelTypeVid(Channel) + cVOLT_DIVQuery, ucVDiv)"/>
       </Getter>
       <Setter>
-        <Execute Statement="WriteString(ChannelID[Channel] + cVOLT_DIVCommand + ucVDiv.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
+        <Execute Statement="WriteString(ChannelTypeVid(Channel) + cVOLT_DIVCommand + ucVDiv.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.VOffset" Type="Extended" >
+    <Property Identifier="TSiglentScope.VOffset" Type="Extended" >
       <Parameters>
         <Parameter Identifier="Channel" Type="TChannelType"/>
       </Parameters>
       <Getter>
-        <Execute Statement="Result:= QueryFloat(ChannelID[Channel] + cVOFFSETQuery)"/>
+        <Execute Statement="Result:= QueryFloat(ChannelTypeVid(Channel) + cVOFFSETQuery)"/>
       </Getter>
       <Setter>
-        <Execute Statement="WriteString(ChannelID[Channel] + cVOFFSETCommand + FloatToCode(Value))"/>
+        <Execute Statement="WriteString(ChannelTypeVid(Channel) + cVOFFSETCommand + FloatToCode(Value))"/>
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.ConvVOffset" Type="ConvInt" >
+    <Property Identifier="TSiglentScope.ConvVOffset" Type="ConvInt" >
       <Parameters>
         <Parameter Identifier="Channel" Type="TChannelType"/>
       </Parameters>
       <Getter>
-        <Execute Statement="Result:= QueryConvInt(ChannelID[Channel] + cVOFFSETQuery, ucVOffset)"/>
+        <Execute Statement="Result:= QueryConvInt(ChannelTypeVid(Channel) + cVOFFSETQuery, ucVOffset)"/>
       </Getter>
       <Setter>
-        <Execute Statement="WriteString(ChannelID[Channel] + cVOFFSETCommand + ucVOffset.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
+        <Execute Statement="WriteString(ChannelTypeVid(Channel) + cVOFFSETCommand + ucVOffset.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
       </Setter>
     </Property>
 
     <!--0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000,2000,5000,10000-->
-    <Property Identifier="TSiglentSDS1104X.Attenuation" Type="Extended">
+    <Property Identifier="TSiglentScope.Attenuation" Type="Extended">
       <Parameters>
         <Parameter Identifier="Channel" Type="TChannelType"/>
       </Parameters>
       <Getter>
-        <Execute Statement="Result:= QueryFloat(ChannelID[Channel] + cATTENUATIONQuery)"/>
+        <Execute Statement="Result:= QueryFloat(ChannelTypeVid(Channel) + cATTENUATIONQuery)"/>
       </Getter>
       <Setter>
-        <Execute Statement="WriteString(ChannelID[Channel] + cATTENUATIONCommand + FloatToCode(Value))"/>
+        <Execute Statement="WriteString(ChannelTypeVid(Channel) + cATTENUATIONCommand + FloatToCode(Value))"/>
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.ConvAttenuation" Type="ConvInt" >
+    <Property Identifier="TSiglentScope.ConvAttenuation" Type="ConvInt" >
       <Parameters>
         <Parameter Identifier="Channel" Type="TChannelType"/>
       </Parameters>
       <Getter>
-        <Execute Statement="Result:= QueryConvInt(ChannelID[Channel] + cATTENUATIONQuery, ucAttenuation)"/>
+        <Execute Statement="Result:= QueryConvInt(ChannelTypeVid(Channel) + cATTENUATIONQuery, ucAttenuation)"/>
       </Getter>
       <Setter>
-        <Execute Statement="WriteString(ChannelID[Channel] + cATTENUATIONCommand + ucAttenuation.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
+        <Execute Statement="WriteString(ChannelTypeVid(Channel) + cATTENUATIONCommand + ucAttenuation.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentSDS1104X.SampleRate" Type="Extended" >
+    <Property Identifier="TSiglentScope.SampleRate" Type="Extended" >
       <Getter>
         <Execute Statement="Result:= QueryFloat(cSARAQuery)"/>
       </Getter>
     </Property>
 
-    <Procedure Identifier="TSiglentSDS1104X.ScreenCapureToFile">
+    <Procedure Identifier="TSiglentScope.ScreenCapureToFile">
       <Parameters>
         <Parameter Identifier="Filename" Type="string"/>
         <Parameter Identifier="ImageType" Type="TImageType"/>
@@ -1409,7 +1657,7 @@
       </Block>
     </Procedure>
 
-    <Procedure Identifier="TSiglentSDS1104X.SaveWaveToFile">
+    <Procedure Identifier="TSiglentScope.SaveWaveToFile">
       <Parameters>
         <Parameter Identifier="Filename" Type="string"/>
         <Parameter Identifier="Wave" Type="string"/>
@@ -1422,14 +1670,12 @@
       </Block>
     </Procedure>
 
-    <Function Identifier="TSiglentSDS1104X.WaveForm" Type="TMemoryStream">
+    <Function Identifier="TSiglentScope.WaveForm" Type="TMemoryStream">
       <Parameters>
         <Parameter Identifier="Trace" Type="TTraceType"/>
       </Parameters>
       <Block>
-        <!--<Execute Statement="WriteString(TraceID + ':WF? ALL')"/>-->
-        <Execute Statement="WriteString(TraceID[Trace] + ':WF? DAT2')"/>
-        <!--<Execute Statement="WriteString(TraceID[Trace] + ':WF? ALL')"/>-->
+        <Execute Statement="WriteString(TraceTypeVid(Trace) + cWAVEFORMQuery + cWAVEFORM_DAT2)"/>
         <Variable Identifier="SaveTimout" Type="UInt32" Init="VisaResource.Timeout"/>
         <Execute Statement="VisaResource.Timeout:= cWaveCaptureTimeout"/>
         <TryFinally>
@@ -1443,25 +1689,24 @@
       </Block>
     </Function>
 
-    <Procedure Identifier="TSiglentSDS1104X.WaveSetup">
+    <Procedure Identifier="TSiglentScope.WaveSetup">
       <Parameters>
         <Parameter Identifier="Segment" Type="Integer"/>
         <Parameter Identifier="LimitSamples" Type="Integer"/>
       </Parameters>
       <Block>
-        <Execute Statement="WriteString(cWFSUTYPE1Command)"/>
-        <Execute Statement="WriteString(ViFormat(cWFSUCommand, 1, LimitSamples, 0, 0))"/>
+        <Execute Statement="WriteString(cWAVEFORM_SETUPTYPE1Command)"/>
+        <Execute Statement="WriteString(ViFormat(cWAVEFORM_SETUPCommand, 1, LimitSamples, 0, 0))"/>
       </Block>
     </Procedure>
 
-    <Function Identifier="TSiglentSDS1104X.WaveForm" Type="TMemoryStream">
+    <Function Identifier="TSiglentScope.WaveForm" Type="TMemoryStream">
       <Parameters>
         <Parameter Identifier="Trace" Type="TTraceType"/>
         <Parameter Identifier="Segment" Type="Integer"/>
         <Parameter Identifier="WaveFormat" Type="TWaveFormFormat"/>
       </Parameters>
       <Block>
-        <Variable Identifier="TraceIDStr" Type="ViString" Init="TraceID[Trace]"/>
         <Variable Identifier="SegmentStr" Type="ViString" Init="''"/>
         <Block Condition="Segment &gt; 0">
           <Execute Statement="ActiveFrame:= Segment"/>
@@ -1469,16 +1714,17 @@
         </Block>
         <Case Expression="WaveFormat">
           <On Select="TWaveFormFormat.Dat2">
-            <Execute Statement="WriteString(TraceIDStr + ':WF? DAT2')"/>
+            <Execute Statement="WriteString(TraceTypeVid(Trace) + cWAVEFORMQuery + cWAVEFORM_DAT2)"/>
           </On>
           <On Select="TWaveFormFormat.All">
-            <Execute Statement="WriteString(TraceIDStr + ':WF? ALL')"/>
+            <Execute Statement="WriteString(TraceTypeVid(Trace) + cWAVEFORMQuery + cWAVEFORM_ALL)"/>
           </On>
           <Otherwise>
             <Raise Expression="Exception.Create(sErrorWaveFormFormat)"/>
           </Otherwise>
         </Case>
-        <sts:Status.Block Text="Format('Reading waveform %s%s', TraceIDStr, SegmentStr)" LeaveText="Format('Done reading waveform %s%s', TraceIDStr, SegmentStr)">
+        <Variable Identifier="TraceName" Type="ViString" Init="TraceTypeName(Trace)"/>
+        <sts:Status.Block Text="Format('Reading waveform %s%s', TraceName, SegmentStr)" LeaveText="Format('Done reading waveform %s%s', TraceName, SegmentStr)">
           <Variable Identifier="SaveTimout" Type="UInt32" Init="VisaResource.Timeout"/>
           <Execute Statement="VisaResource.Timeout:= cWaveCaptureTimeout"/>
           <TryFinally>
@@ -1493,7 +1739,7 @@
       </Block>
     </Function>
 
-    <Procedure Identifier="TSiglentSDS1104X.WaveCapureToFile">
+    <Procedure Identifier="TSiglentScope.WaveCapureToFile">
       <Parameters>
         <Parameter Identifier="Trace" Type="TTraceType"/>
         <Parameter Identifier="Filename" Type="string"/>
@@ -1523,8 +1769,8 @@
         <Variable Identifier="TimePerSample" Type="Extended"/>
       </Variables>
       <Block>
-        <Variable Identifier="TraceIDStr" Type="string" Init="TraceID[Trace]"/>
-        <sts:Status.Block Text="Format('Capturing waveform %s to file &quot;%s&quot;', TraceIDStr, Filename)" LeaveText="Format('Done capturing waveform %s to file &quot;%s&quot;', TraceIDStr, Filename)">
+        <Variable Identifier="TraceName" Type="string" Init="TraceTypeName(Trace)"/>
+        <sts:Status.Block Text="Format('Capturing waveform %s to file &quot;%s&quot;', TraceName, Filename)" LeaveText="Format('Done capturing waveform %s to file &quot;%s&quot;', TraceName, Filename)">
           <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
           <Object.Use Identifier="Stream" Type="TStream" Expression="WaveForm(Trace, 0, TWaveFormFormat.All)">
             <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
@@ -1951,10 +2197,6 @@
                       <stm:SetState Name="WaveDataUpdateSingleSample"/>
                     </On>
                   </Case>
-                  <!-- Wrong in all dataformat!-->
-                  <!--<rep:Reporter.Information Text="Format('BlockSize: %d', BlockSize)" Target="Visa" Condition="DoReportVisa"/>
-                  <rep:Reporter.Information Text="Format('Stream.Position: %d', Stream.Position)" Target="Visa" Condition="DoReportVisa"/>
-                  <rep:Reporter.Information Text="Format('Stream.Size: %d', Stream.Size)" Target="Visa" Condition="DoReportVisa"/>-->
                 </Block>
               </stm:State>
               <stm:State Name="WaveDataCreateDataPoints">
@@ -1985,7 +2227,7 @@
       </Block>
     </Procedure>
 
-    <Function Identifier="TSiglentSDS1104X.GetMultiFrameSamples" Type="TMultiFrameAcquisitionInfo">
+    <Function Identifier="TSiglentScope.GetMultiFrameSamples" Type="TMultiFrameAcquisitionInfo">
       <Parameters>
         <Parameter Identifier="Trace" Type="TTraceType"/>
         <Parameter Identifier="FrameHighIndex" Type="Int64"/>
@@ -1996,8 +2238,8 @@
         <Variable Identifier="WaveFormFormat" Type="TWaveFormFormat" Init="TWaveFormFormat.All"/>
       </Variables>
       <Block>
-        <Variable Identifier="TraceIDStr" Type="string" Init="TraceID[Trace]"/>
-        <sts:Status.Block Text="Format('Capturing %s in %d segments', TraceIDStr, FrameHighIndex)" LeaveText="Format('Done capturing %s in %d segments', TraceIDStr, FrameHighIndex)">
+        <Variable Identifier="TraceName" Type="string" Init="TraceTypeName(Trace)"/>
+        <sts:Status.Block Text="Format('Capturing %s in %d segments', TraceName, FrameHighIndex)" LeaveText="Format('Done capturing %s in %d segments', TraceName, FrameHighIndex)">
           <Execute Statement="Result:= TMultiFrameAcquisitionInfo.Create"/>
           <Block Condition="Assigned(Options)">
             <Execute Statement="LimitSamples:= Options.LimitSamples"/>
@@ -2014,7 +2256,6 @@
                 <sts:Status.Block Text="Format('Processing %d bytes of segment %d', Stream.Size, ActiveFrameIndex)" LeaveText="Format('Done processing data of segment %d', ActiveFrameIndex)">
                   <Execute Statement="LoadSamplesFromStream(Result, Stream, LimitSamples)"/>
                 </sts:Status.Block>
-                <!--<Execute Statement="Stream.SaveToFile(Format('C:\Users\MW\SynologyDrive\Transfer\WavePointLimitTest01\Wave\Wave %.3d.dat', ActiveFrameIndex))" Condition="IsDebugging"/>-->
               </Object.Use>
               <Execute Statement="WaveFormFormat:= TWaveFormFormat.Dat2"/>
             </ForLoop>
@@ -2023,7 +2264,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104X.GetSingleSummedSample" Type="TSingleSummedSampleAcquisitionInfo">
+    <Function Identifier="TSiglentScope.GetSingleSummedSample" Type="TSingleSummedSampleAcquisitionInfo">
       <Parameters>
         <Parameter Identifier="Trace" Type="TTraceType"/>
         <Parameter Identifier="Options" Type="TSingleSummedSampleAcquisitionOptions"/>
@@ -2049,19 +2290,19 @@
       </Block>
     </Function>
 
-    <Procedure Identifier="TSiglentSDS1104X.Stop">
+    <Procedure Identifier="TSiglentScope.Stop">
       <Block>
         <Execute Statement="WriteString(cSTOPCommand)"/>
       </Block>
     </Procedure>
 
-    <Procedure Identifier="TSiglentSDS1104X.Wait">
+    <Procedure Identifier="TSiglentScope.Wait">
       <Block>
         <Execute Statement="WriteString(cWAITCommand)"/>
       </Block>
     </Procedure>
 
-    <Procedure Identifier="TSiglentSDS1104X.Wait">
+    <Procedure Identifier="TSiglentScope.Wait">
       <Parameters>
         <Parameter Identifier="Time" Type="Extended"/>
       </Parameters>
@@ -2070,13 +2311,13 @@
       </Block>
     </Procedure>
 
-    <Procedure Identifier="TSiglentSDS1104X.Arm">
+    <Procedure Identifier="TSiglentScope.Arm">
       <Block>
         <Execute Statement="WriteString('ARM')"/>
       </Block>
     </Procedure>
 
-    <Procedure Identifier="TSiglentSDS1104X.CheckStatus">
+    <Procedure Identifier="TSiglentScope.CheckStatus">
       <Block>
         <Execute Statement="WriteString(cINRQuery)"/>
         <Variable Identifier="StatusFlags" Type="UInt32" Init="ReadUInt32"/>
@@ -2085,7 +2326,7 @@
       </Block>
     </Procedure>
 
-    <Procedure Identifier="TSiglentSDS1104X.CheckStatus">
+    <Procedure Identifier="TSiglentScope.CheckStatus">
       <Parameters>
         <Parameter Identifier="SignalAcquiredStatusCnt" Type="UInt64" Direction="Output"/>
         <Parameter Identifier="TriggerIsReadyStatusCnt" Type="UInt64" Direction="Output"/>
@@ -2100,16 +2341,16 @@
       </Block>
     </Procedure>
 
-    <Procedure Identifier="TSiglentSDS1104X.SetAverageMode">
+    <Procedure Identifier="TSiglentScope.SetAverageMode">
       <Parameters>
         <Parameter Identifier="Time" Type="TAvgTime"/>
       </Parameters>
       <Block>
-        <Execute Statement="WriteString(cACQUIRE_WAYCommand + AvgTime[Time])"/>
+        <Execute Statement="WriteString(cACQUIRE_WAYAverageCommand + AvgTimeFromVid(Time))"/>
       </Block>
     </Procedure>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ConvReadTDiv" Type="ConvInt">
+    <Function Identifier="TSiglentScopeIniHelper.ConvReadTDiv" Type="ConvInt">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="string"/>
@@ -2119,7 +2360,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ConvReadMathVDiv" Type="ConvInt">
+    <Function Identifier="TSiglentScopeIniHelper.ConvReadMathVDiv" Type="ConvInt">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="string"/>
@@ -2129,7 +2370,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ConvReadMathVPosition" Type="ConvInt">
+    <Function Identifier="TSiglentScopeIniHelper.ConvReadMathVPosition" Type="ConvInt">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="string"/>
@@ -2139,7 +2380,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ConvReadTriggerDelay" Type="ConvInt">
+    <Function Identifier="TSiglentScopeIniHelper.ConvReadTriggerDelay" Type="ConvInt">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="string"/>
@@ -2149,7 +2390,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ConvReadTriggerLevel" Type="ConvInt">
+    <Function Identifier="TSiglentScopeIniHelper.ConvReadTriggerLevel" Type="ConvInt">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="string"/>
@@ -2159,7 +2400,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ConvReadVDiv" Type="ConvInt">
+    <Function Identifier="TSiglentScopeIniHelper.ConvReadVDiv" Type="ConvInt">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="string"/>
@@ -2169,7 +2410,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ConvReadVOffset" Type="ConvInt">
+    <Function Identifier="TSiglentScopeIniHelper.ConvReadVOffset" Type="ConvInt">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="string"/>
@@ -2179,7 +2420,7 @@
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ConvReadAttenuation" Type="ConvInt">
+    <Function Identifier="TSiglentScopeIniHelper.ConvReadAttenuation" Type="ConvInt">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="string"/>
@@ -2189,98 +2430,85 @@
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ReadTraceType" Type="TTraceType">
+    <Function Identifier="TSiglentScopeIniHelper.ReadTraceType" Type="TTraceType">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="TTraceType"/>
       </Parameters>
       <Block>
-        <Variable Identifier="DefaultString" Type="string" Init="TSiglentSDS1104X.TraceTypeName(Default)"/>
+        <Variable Identifier="DefaultString" Type="string" Init="TSiglentScope.TraceTypeName(Default)"/>
         <Variable Identifier="ResultS" Type="string" Init="Inifile.ReadString(CurrentSection, Key, DefaultString)"/>
-        <Execute Statement="Result:= TSiglentSDS1104X.TraceTypeFromName(ResultS)"/>
-        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentSDS1104X.TraceTypeName(Result))" Condition="EnableEcho"/>
+        <Execute Statement="Result:= TSiglentScope.TraceTypeFromName(ResultS)"/>
+        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentScope.TraceTypeName(Result))" Condition="EnableEcho"/>
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ReadHWTraceType" Type="THWTraceType">
-      <Parameters>
-        <Parameter Identifier="Key" Type="string"/>
-        <Parameter Identifier="Default" Type="THWTraceType"/>
-      </Parameters>
-      <Block>
-        <Variable Identifier="DefaultString" Type="string" Init="TSiglentSDS1104X.HWTraceTypeName(Default)"/>
-        <Variable Identifier="ResultS" Type="string" Init="Inifile.ReadString(CurrentSection, Key, DefaultString)"/>
-        <Execute Statement="Result:= TSiglentSDS1104X.HWTraceTypeFromName(ResultS)"/>
-        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentSDS1104X.HWTraceTypeName(Result))" Condition="EnableEcho"/>
-      </Block>
-    </Function>
-
-    <Function Identifier="TSiglentSDS1104XIniHelper.ReadChannelType" Type="TChannelType">
+    <Function Identifier="TSiglentScopeIniHelper.ReadChannelType" Type="TChannelType">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="TChannelType"/>
       </Parameters>
       <Block>
-        <Variable Identifier="DefaultString" Type="string" Init="TSiglentSDS1104X.ChannelTypeName(Default)"/>
+        <Variable Identifier="DefaultString" Type="string" Init="TSiglentScope.ChannelTypeName(Default)"/>
         <Variable Identifier="ResultS" Type="string" Init="Inifile.ReadString(CurrentSection, Key, DefaultString)"/>
-        <Execute Statement="Result:= TSiglentSDS1104X.ChannelTypeFromName(ResultS)"/>
-        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentSDS1104X.ChannelTypeName(Result))" Condition="EnableEcho"/>
+        <Execute Statement="Result:= TSiglentScope.ChannelTypeFromName(ResultS)"/>
+        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentScope.ChannelTypeName(Result))" Condition="EnableEcho"/>
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ReadTriggerMode" Type="TTriggerMode">
+    <Function Identifier="TSiglentScopeIniHelper.ReadTriggerMode" Type="TTriggerMode">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="TTriggerMode"/>
       </Parameters>
       <Block>
-        <Variable Identifier="DefaultString" Type="string" Init="TSiglentSDS1104X.TriggerModeName(Default)"/>
+        <Variable Identifier="DefaultString" Type="string" Init="TSiglentScope.TriggerModeName(Default)"/>
         <Variable Identifier="ResultS" Type="string" Init="Inifile.ReadString(CurrentSection, Key, DefaultString)"/>
-        <Execute Statement="Result:= TSiglentSDS1104X.TriggerModeFromName(ResultS)"/>
-        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentSDS1104X.TriggerModeName(Result))" Condition="EnableEcho"/>
+        <Execute Statement="Result:= TSiglentScope.TriggerModeFromName(ResultS)"/>
+        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentScope.TriggerModeName(Result))" Condition="EnableEcho"/>
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ReadMemSize" Type="TMemSize">
+    <Function Identifier="TSiglentScopeIniHelper.ReadMemSize" Type="TMemSize">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="TMemSize"/>
       </Parameters>
       <Block>
-        <Variable Identifier="DefaultString" Type="string" Init="TSiglentSDS1104X.MemSizeName(Default)"/>
+        <Variable Identifier="DefaultString" Type="string" Init="TSiglentScope.MemSizeName(Default)"/>
         <Variable Identifier="ResultS" Type="string" Init="Inifile.ReadString(CurrentSection, Key, DefaultString)"/>
-        <Execute Statement="Result:= TSiglentSDS1104X.MemSizeFromName(ResultS)"/>
-        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentSDS1104X.MemSizeName(Result))" Condition="EnableEcho"/>
+        <Execute Statement="Result:= TSiglentScope.MemSizeFromName(ResultS)"/>
+        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentScope.MemSizeName(Result))" Condition="EnableEcho"/>
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ReadAvgTime" Type="TAvgTime">
+    <Function Identifier="TSiglentScopeIniHelper.ReadAvgTime" Type="TAvgTime">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="TAvgTime"/>
       </Parameters>
       <Block>
-        <Variable Identifier="DefaultString" Type="string" Init="TSiglentSDS1104X.AvgTimeName(Default)"/>
+        <Variable Identifier="DefaultString" Type="string" Init="TSiglentScope.AvgTimeName(Default)"/>
         <Variable Identifier="ResultS" Type="string" Init="Inifile.ReadString(CurrentSection, Key, DefaultString)"/>
-        <Execute Statement="Result:= TSiglentSDS1104X.AvgTimeFromName(ResultS)"/>
-        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentSDS1104X.AvgTimeName(Result))" Condition="EnableEcho"/>
+        <Execute Statement="Result:= TSiglentScope.AvgTimeFromName(ResultS)"/>
+        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentScope.AvgTimeName(Result))" Condition="EnableEcho"/>
       </Block>
     </Function>
 
-    <Function Identifier="TSiglentSDS1104XIniHelper.ReadAcquireWay" Type="TAcquireWay">
+    <Function Identifier="TSiglentScopeIniHelper.ReadAcquireWay" Type="TAcquireWay">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
         <Parameter Identifier="Default" Type="TAcquireWay"/>
       </Parameters>
       <Block>
-        <Variable Identifier="DefaultString" Type="string" Init="TSiglentSDS1104X.AcquireWayName(Default)"/>
+        <Variable Identifier="DefaultString" Type="string" Init="TSiglentScope.AcquireWayName(Default)"/>
         <Variable Identifier="ResultS" Type="string" Init="Inifile.ReadString(CurrentSection, Key, DefaultString)"/>
-        <Execute Statement="Result:= TSiglentSDS1104X.AcquireWayFromName(ResultS)"/>
-        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentSDS1104X.AcquireWayName(Result))" Condition="EnableEcho"/>
+        <Execute Statement="Result:= TSiglentScope.AcquireWayFromName(ResultS)"/>
+        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentScope.AcquireWayName(Result))" Condition="EnableEcho"/>
       </Block>
     </Function>
 
-    <Constructor Identifier="TSiglentSDS1104XIniHelper.Create">
+    <Constructor Identifier="TSiglentScopeIniHelper.Create">
       <Parameters>
         <Parameter Identifier="Inifile" Type="TCustomIniFile"/>
         <Parameter Identifier="EnableEcho" Type="Boolean"/>
@@ -2294,12 +2522,18 @@
 
   <Finalization>
     <Free Identifier="TraceTypeNameIndex"/>
-    <Free Identifier="HWTraceTypeNameIndex"/>
     <Free Identifier="ChannelTypeNameIndex"/>
     <Free Identifier="TriggerModeNameIndex"/>
     <Free Identifier="MemSizeNameIndex"/>
     <Free Identifier="AvgTimeNameIndex"/>
     <Free Identifier="AcquireWayNameIndex"/>
+    <Free Identifier="AcquireWayVidIndex"/>
+    <Free Identifier="AvgTimeVidIndex"/>
+    <Free Identifier="ChannelTypeVidIndex"/>
+    <Free Identifier="HeaderTypeVidIndex"/>
+    <Free Identifier="MemSizeVidIndex"/>
+    <Free Identifier="TraceTypeVidIndex"/>
+    <Free Identifier="TriggerModeVidIndex"/>
   </Finalization>
 
 </pkg:Library>

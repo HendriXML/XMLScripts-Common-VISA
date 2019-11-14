@@ -15,18 +15,20 @@
   xmlns:rep="urn:schemas-www-wisware.nl-xmlscripting-report"
   xmlns:sts="urn:schemas-www-wisware.nl-xmlscripting-showstatus"
   xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
-  >
+  xmlns:stm="urn:schemas-www-wisware.nl-xmlscripting-statemanagement"
+ >
   <Uses>
     <Use Identifier="ElectronicUtils"/>
   </Uses>
-  
+
   <Type>
+    <Alias Identifier="TMappingCaseInSensitiveViStringToInt64" RefersTo="TMappingCaseInSensitiveStringToInt64"/>
     <Enumeration Identifier="TVisaAttributeState" Elements="NoValue, ValidValue, InvalidValue, PendingChange"/>
 
-    <DataClass Identifier="TVisaInstrument">
+    <DataClass Identifier="TVisaInstrument" ClassOfIdentifier="TTVisaInstrument">
       <Field Identifier="VisaResource" Type="TVisaResource"/>
     </DataClass>
-    
+
     <DataClass Identifier="TIniHelper" DefaultConstructor="none">
       <Field Identifier="Inifile" Type="TCustomIniFile"/>
       <Field Identifier="EnableEcho" Type="Boolean"/>
@@ -75,7 +77,9 @@
   </Type>
   <Constants>
     <Constant Identifier="cOPCQuery" Type="ViString" Expression="'*OPC?'"/>
+    <Constant Identifier="cIDNQuery" Type="ViString" Expression="'*IDN?'"/>
     <Constant Identifier="viSpace" Type="ViString" Expression="' '"/>
+    <Constant Identifier="viComma" Type="ViString" Expression="','"/>
     <Constant Identifier="viDecimalSeperatior" Type="string" Expression="'.'"/>
     <Constant Identifier="sErrorUnsupportedOperation" Type="string" Expression="'Unsupported operation'"/>
   </Constants>
@@ -83,8 +87,149 @@
   <Variables>
     <Variable Identifier="DoReportVisa" Type="Boolean" Init="False"/>
   </Variables>
-  
+
   <Procedures>
+
+    <Function Identifier="TTVisaInstrument.DecodeINR" Type="Boolean" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="ViString"/>
+        <Parameter Identifier="Field1" Type="ViString" Direction="Output"/>
+        <Parameter Identifier="Field2" Type="ViString" Direction="Output"/>
+        <Parameter Identifier="Field3" Type="ViString" Direction="Output"/>
+        <Parameter Identifier="Field4" Type="ViString" Direction="Output"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="Index" Type="Integer" Init="1"/>
+        <Variable Identifier="FieldStart1" Type="Integer"/>
+        <Variable Identifier="FieldStart2" Type="Integer"/>
+        <Variable Identifier="FieldStart3" Type="Integer"/>
+        <Variable Identifier="FieldStart4" Type="Integer"/>
+        <Variable Identifier="FieldCount1" Type="Integer"/>
+        <Variable Identifier="FieldCount2" Type="Integer"/>
+        <Variable Identifier="FieldCount3" Type="Integer"/>
+        <Variable Identifier="FieldCount4" Type="Integer" Init="0"/>
+        <Execute Statement="Result:= False"/>
+        <stm:StateHandler InitialState="StartField1">
+          <StringLoop StringValue="Value" OrdinalIdentifier="Chr" Ansi="true">
+            <stm:HandleStates>
+              <stm:State Name="StartField1">
+                <Case Expression="Chr" OrdinalType="ansichar">
+                  <On Select="','">
+                    <Execute Statement="FieldStart1:= Index"/>
+                    <Execute Statement="FieldCount1:= 0"/>
+                    <stm:SetState Name="StartField2"/>
+                  </On>
+                  <Otherwise>
+                    <Execute Statement="FieldStart1:= Index"/>
+                    <Execute Statement="FieldCount1:= 1"/>
+                    <stm:SetState Name="InField1"/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="InField1">
+                <Case Expression="Chr" OrdinalType="ansichar">
+                  <On Select="','">
+                    <stm:SetState Name="StartField2"/>
+                  </On>
+                  <Otherwise>
+                    <Execute Statement="FieldCount1:= FieldCount1 + 1"/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="StartField2">
+                <Case Expression="Chr" OrdinalType="ansichar">
+                  <On Select="','">
+                    <Execute Statement="FieldStart2:= Index"/>
+                    <Execute Statement="FieldCount2:= 0"/>
+                    <stm:SetState Name="StartField3"/>
+                  </On>
+                  <Otherwise>
+                    <Execute Statement="FieldStart2:= Index"/>
+                    <Execute Statement="FieldCount2:= 1"/>
+                    <stm:SetState Name="InField2"/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="InField2">
+                <Case Expression="Chr" OrdinalType="ansichar">
+                  <On Select="','">
+                    <stm:SetState Name="StartField3"/>
+                  </On>
+                  <Otherwise>
+                    <Execute Statement="FieldCount2:= FieldCount2 + 1"/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="StartField3">
+                <Case Expression="Chr" OrdinalType="ansichar">
+                  <On Select="','">
+                    <Execute Statement="FieldStart3:= Index"/>
+                    <Execute Statement="FieldCount3:= 0"/>
+                    <stm:SetState Name="StartField4"/>
+                  </On>
+                  <Otherwise>
+                    <Execute Statement="FieldStart3:= Index"/>
+                    <Execute Statement="FieldCount3:= 1"/>
+                    <stm:SetState Name="InField3"/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="InField3">
+                <Case Expression="Chr" OrdinalType="ansichar">
+                  <On Select="','">
+                    <Execute Statement="Result:= True"/>
+                    <stm:SetState Name="StartField4"/>
+                  </On>
+                  <Otherwise>
+                    <Execute Statement="FieldCount3:= FieldCount3 + 1"/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="StartField4">
+                <Case Expression="Chr" OrdinalType="ansichar">
+                  <On Select="','">
+                    <Exit/>
+                  </On>
+                  <Otherwise>
+                    <Execute Statement="Result:= True"/>
+                    <Execute Statement="FieldStart4:= Index"/>
+                    <Execute Statement="FieldCount4:= 1"/>
+                    <stm:SetState Name="InField4"/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="InField4">
+                <Case Expression="Chr" OrdinalType="ansichar">
+                  <On Select="','">
+                    <stm:SetState Name="Done"/>
+                  </On>
+                  <Otherwise>
+                    <Execute Statement="FieldCount4:= FieldCount4 + 1"/>
+                  </Otherwise>
+                </Case>
+              </stm:State>
+              <stm:State Name="Done">
+              </stm:State>
+            </stm:HandleStates>
+            <Execute Statement="Index:= Index + 1"/>
+          </StringLoop>
+        </stm:StateHandler>
+        <Block Condition="Result">
+          <Execute Statement="Field1:= Copy(Value, FieldStart1, FieldCount1)"/>
+          <Execute Statement="Field2:= Copy(Value, FieldStart2, FieldCount2)"/>
+          <Execute Statement="Field3:= Copy(Value, FieldStart3, FieldCount3)"/>
+          <Choose>
+            <When Expression="FieldCount4 = 0">
+              <Execute Statement="Field4:= ''"/>
+            </When>
+            <Otherwise>
+              <Execute Statement="Field4:= Copy(Value, FieldStart4, FieldCount4)"/>
+            </Otherwise>
+          </Choose>
+        </Block>
+      </Block>
+    </Function>
+
     <Constructor Identifier="TMultiFrameAcquisitionInfo.Create">
       <Block>
         <Execute Statement="SamplePointManager:= TSamplePointManager.Create"/>
@@ -256,7 +401,7 @@
         <Execute Statement="VisaResource.AnsiWrite(Value)"/>
       </Block>
     </Procedure>
-    
+
     <Function Identifier="TVISAInstrument.ReadOnOff" Type="Boolean">
       <Constants>
         <Constant Identifier="sOn" Type="ViString" Expression="'ON'"/>
@@ -312,7 +457,7 @@
         <Raise Expression="Exception.Create(Format('Cannot convert: %s', readResult))" Condition="not UnitConvertor.StrToIntValue(readResult, Result)"/>
       </Block>
     </Function>
-    
+
     <Procedure Identifier="TVISAInstrument.WriteParamConvInt">
       <Parameters>
         <Parameter Identifier="Parameter" Type="ViString"/>
@@ -497,7 +642,7 @@
         <Execute Statement="Self.EnableEcho:= EnableEcho"/>
       </Block>
     </Constructor>
-    
+
     <Function Identifier="TIniHelper.ReadConvInt" Type="ConvInt">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>

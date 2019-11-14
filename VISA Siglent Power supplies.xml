@@ -1,0 +1,419 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<pkg:Library
+  xsi:schemaLocation="urn:schemas-www-wisware.nl-scriptingpackages ../XmlSchemas.Common.XmlScript/XMLScripting.Packages.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:pkg="urn:schemas-www-wisware.nl-scriptingpackages"
+  xmlns:sys="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:ado="urn:schemas-www-wisware.nl-xmlscripting-ado"
+  xmlns:fil="urn:schemas-www-wisware.nl-xmlscripting-filemanagement"
+  xmlns:fwl="urn:schemas-www-wisware.nl-xmlscripting-windowsfirewall"
+  xmlns:inx="urn:schemas-www-wisware.nl-xmlscripting-index"
+  xmlns:lil="urn:schemas-www-wisware.nl-xmlscripting-linkedlist"
+  xmlns:msx="urn:schemas-www-wisware.nl-xmlscripting-xml"
+  xmlns:reg="urn:schemas-www-wisware.nl-xmlscripting-registry"
+  xmlns:rep="urn:schemas-www-wisware.nl-xmlscripting-report"
+  xmlns:sts="urn:schemas-www-wisware.nl-xmlscripting-showstatus"
+  xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
+  xmlns:sim="urn:schemas-www-wisware.nl-xmlscripting-simulateuserinput"
+  >
+  <Uses>
+    <Use Identifier="ElectronicUtils"/>
+    <Use Identifier="VISAInstrument"/>
+  </Uses>
+
+  <Type>
+    <Enumeration Identifier="TSPDChannel" Elements="CH1, CH2, CH3" LowAlias="Low" HighAlias="High"/>
+
+    <DataClass Identifier="TSiglentPowerSupplyIniHelper" Inherit="TIniHelper" DefaultConstructor="none">
+    </DataClass>
+
+    <DataClass Identifier="TSiglentPowerSupply" Inherit="TVISAInstrument" ClassOfIdentifier="TTSiglentPowerSupply">
+
+    </DataClass>
+
+    <DataClass Identifier="TSiglentSPD3303X" Inherit="TSiglentPowerSupply">
+
+    </DataClass>
+    
+    <DataClass Identifier="TSiglentSPD3303XE" Inherit="TSiglentSPD3303X">
+
+    </DataClass>
+  </Type>
+
+  <Constants>
+    <Constant Identifier="cOn" Type="ViString" Expression="'ON'"/>
+    <Constant Identifier="cOff" Type="ViString" Expression="'OFF'"/>
+    <Constant Identifier="cVidSPDChannelCH1" Type="ViString" Expression="'CH1'"/>
+    <Constant Identifier="cVidSPDChannelCH2" Type="ViString" Expression="'CH2'"/>
+    <Constant Identifier="cVidSPDChannelCH3" Type="ViString" Expression="'CH3'"/>
+    <Constant Identifier="cNameSPDChannelTypeCH1" Type="string" Expression="'CH1'"/>
+    <Constant Identifier="cNameSPDChannelTypeCH2" Type="string" Expression="'CH2'"/>
+    <Constant Identifier="cNameSPDChannelTypeCH3" Type="string" Expression="'CH3'"/>
+    <Constant Identifier="cBitOnOffCH1" Type="UInt32" Expression="1 shl 4"/>
+    <Constant Identifier="cBitOnOffCH2" Type="UInt32" Expression="1 shl 5"/>
+    <Constant Identifier="cVOLTageQuery" Type="ViString" Expression="':VOLTage?'"/>
+    <Constant Identifier="cVOLTageCommand" Type="ViString" Expression="':VOLTage '"/>
+    <Constant Identifier="cCURRentQuery" Type="ViString" Expression="':CURRent?'"/>
+    <Constant Identifier="cCURRentCommand" Type="ViString" Expression="':CURRent '"/>
+    <Constant Identifier="cMEASureCURRentQuery" Type="ViString" Expression="'MEASure:CURRent? '"/>
+    <Constant Identifier="cMEASureVOLTageQuery" Type="ViString" Expression="'MEASure:VOLTage? '"/>
+    <Constant Identifier="cOUTPutQuery" Type="ViString" Expression="'OUTPut? '"/>
+    <Constant Identifier="cOUTPutCommand" Type="ViString" Expression="'OUTPut '"/>
+    <Constant Identifier="cSYSTemSTATusQuery" Type="ViString" Expression="'SYSTem:STATus?'"/>
+    <Constant Identifier="sErrorInvalidChannel" Type="string" Expression="'Invalid channel'"/>
+    <Constant Identifier="sErrorCouldNotDeterminePSU" Type="string" Expression="'Could not determine the power supply model'"/>
+    <Constant Identifier="sErrorUnknownPSU" Type="string" Expression="'Unknown power supply model: '"/>
+  </Constants>
+
+  <Variables>
+    <Variable Identifier="ucVoltage" Type="TUnitConvertor"/>
+    <Variable Identifier="ucActualVoltage" Type="TUnitConvertor"/>
+
+    <Variable Identifier="ucCurrent" Type="TUnitConvertor"/>
+    <Variable Identifier="ucActualCurrent" Type="TUnitConvertor"/>
+
+    <Variable Identifier="SPDChannelTypeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
+    <Variable Identifier="SPDChannelVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+  </Variables>
+
+  <Procedures>
+    <Function Identifier="TTSiglentPowerSupply.MatchingClass" Type="TTSiglentPowerSupply">
+      <Parameters>
+        <Parameter Identifier="VisaResource" Type="TVisaResource"/>
+      </Parameters>
+      <Block>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', cIDNQuery)" Condition="DoReportVisa"/>
+        <Execute Statement="VisaResource.AnsiWrite(cIDNQuery)"/>
+        <Variable Identifier="INR" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', INR)" Condition="DoReportVisa"/>
+        <Variable Identifier="Manufacturer" Type="ViString"/>
+        <Variable Identifier="Model" Type="ViString"/>
+        <Variable Identifier="Field3" Type="ViString"/>
+        <Variable Identifier="Field4" Type="ViString"/>
+        <Raise Expression="Exception.Create(sErrorCouldNotDeterminePSU)" Condition="not DecodeINR(INR, Manufacturer, Model, Field3, Field4)"/>
+        <!--<rep:Reporter.Information Text="Format('Manufacturer: %s', Manufacturer)"/>
+        <rep:Reporter.Information Text="Format('Model: %s', Model)"/>
+        <rep:Reporter.Information Text="Format('Field3: %s', Field3)"/>
+        <rep:Reporter.Information Text="Format('Field4: %s', Field4)"/>-->
+        <Choose>
+          <When Expression="Manufacturer = 'Siglent Technologies'">
+            <Choose>
+              <When Expression="Model='SPD3303X'">
+                <Execute Statement="Result:= TSiglentSPD3303X"/>
+              </When>
+              <When Expression="Model='SPD3303X-E'">
+                <Execute Statement="Result:= TSiglentSPD3303XE"/>
+              </When>
+              <Otherwise>
+                <Raise Expression="Exception.Create(sErrorUnknownPSU + Model)"/>
+              </Otherwise>
+            </Choose>
+          </When>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorUnknownPSU + Manufacturer + ' ' + Model)"/>
+          </Otherwise>
+        </Choose>
+      </Block>
+    </Function>
+
+
+    <Procedure Identifier="TSiglentPowerSupply.RaiseInvalidChannel">
+      <Block>
+        <Raise Expression="Exception.Create(sErrorInvalidChannel)"/>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="TTSiglentPowerSupply.ChannelTypeName" Type="string" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TSPDChannel"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TSPDChannel.CH1">
+            <Execute Statement="Result:= cNameSPDChannelTypeCH1"/>
+          </On>
+          <On Select="TSPDChannel.CH2">
+            <Execute Statement="Result:= cNameSPDChannelTypeCH2"/>
+          </On>
+          <On Select="TSPDChannel.CH3">
+            <Execute Statement="Result:= cNameSPDChannelTypeCH3"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidChannel)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentPowerSupply.ChannelVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TSPDChannel"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TSPDChannel.CH1">
+            <Execute Statement="Result:= cVidSPDChannelCH1"/>
+          </On>
+          <On Select="TSPDChannel.CH2">
+            <Execute Statement="Result:= cVidSPDChannelCH2"/>
+          </On>
+          <On Select="TSPDChannel.CH3">
+            <Execute Statement="Result:= cVidSPDChannelCH3"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidChannel)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentPowerSupply.FullChannelVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TSPDChannel"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TSPDChannel.CH1">
+            <Execute Statement="Result:= cVidSPDChannelCH1"/>
+          </On>
+          <On Select="TSPDChannel.CH2">
+            <Execute Statement="Result:= cVidSPDChannelCH2"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidChannel)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentPowerSupply.ChannelFromVid" Type="TSPDChannel" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(SPDChannelVidIndex)">
+          <Execute Statement="SPDChannelVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TSPDChannel.Low" To="TSPDChannel.High">
+            <inx:Index.MapValue Index="SPDChannelVidIndex" Key="ChannelVid(I)" Value="I"/>
+          </ForLoop>
+          <Variable Identifier="Found" Type="Boolean"/>
+          <inx:Index.FindValue Index="SPDChannelVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+          <Raise Expression="Exception.Create(sErrorInvalidChannel)" Condition="not Found"/>
+        </Block>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentPowerSupply.FullChannelFromVid" Type="TSPDChannel" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= ChannelFromVid(Value)"/>
+        <Raise Expression="Exception.Create(sErrorInvalidChannel)" Condition="Result = TSPDChannel.CH3"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentPowerSupply.ChannelTypeFromName" Type="TSPDChannel">
+      <Parameters>
+        <Parameter Identifier="Name" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(SPDChannelTypeNameIndex)">
+          <Execute Statement="SPDChannelTypeNameIndex:= TMappingCaseInSensitiveUnicodeStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TSPDChannel.Low" To="TSPDChannel.High">
+            <inx:Index.MapValue Index="SPDChannelTypeNameIndex" Key="ChannelTypeName(I)" Value="I"/>
+          </ForLoop>
+        </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="SPDChannelTypeNameIndex" Key="Name" Value="Result" Found="Found" Flags="NoErrorOnNotFound" />
+        <Raise Expression="Exception.Create(sErrorInvalidChannel)" Condition="not Found"/>
+      </Block>
+    </Function>
+
+    <Property Identifier="TSiglentPowerSupply.Voltage" Type="Extended">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TSPDChannel"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryFloat(FullChannelVid(Channel) + cVOLTageQuery)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(FullChannelVid(Channel) + cVOLTageCommand + FloatToCode(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentPowerSupply.ConvVoltage" Type="ConvInt" >
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TSPDChannel"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryConvInt(FullChannelVid(Channel) + cVOLTageQuery, ucVoltage)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(FullChannelVid(Channel) + cVOLTageCommand + ucVoltage.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentPowerSupply.Current" Type="Extended">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TSPDChannel"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryFloat(FullChannelVid(Channel) + cCURRentQuery)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(FullChannelVid(Channel) + cCURRentCommand + FloatToCode(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentPowerSupply.ConvCurrent" Type="ConvInt" >
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TSPDChannel"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryConvInt(FullChannelVid(Channel) + cCURRentQuery, ucCurrent)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(FullChannelVid(Channel) + cCURRentCommand + ucCurrent.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TSiglentPowerSupply.ActualCurrent" Type="Extended">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TSPDChannel"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryFloat(cMEASureCURRentQuery + FullChannelVid(Channel))"/>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TSiglentPowerSupply.ConvActualCurrent" Type="ConvInt" >
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TSPDChannel"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryConvInt(cMEASureCURRentQuery + FullChannelVid(Channel), ucActualCurrent)"/>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TSiglentPowerSupply.ActualVoltage" Type="Extended">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TSPDChannel"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryFloat(cMEASureVOLTageQuery + FullChannelVid(Channel))"/>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TSiglentPowerSupply.ConvActualVoltage" Type="ConvInt" >
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TSPDChannel"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryConvInt(cMEASureVOLTageQuery + FullChannelVid(Channel), ucActualCurrent)"/>
+      </Getter>
+    </Property>
+
+    <Function Identifier="TSiglentPowerSupply.WaitForStabilizedVoltage">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TSPDChannel"/>
+        <Parameter Identifier="DiffTime" Type="Integer"/>
+        <Parameter Identifier="Difference" Type="Extended"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="PreWaitVoltage" Type="Extended"/>
+        <Variable Identifier="SPCICommand" Type="ViString" Init="cMEASureVOLTageQuery + FullChannelVid(Channel)"/>
+        <RepeatUntilLoop Expression="Abs(PreWaitVoltage - Result) &lt; Difference">
+          <ExitOnAbortRequest/>
+          <Execute Statement="WriteString(SPCICommand)"/>
+          <Execute Statement="PreWaitVoltage:= ReadFloat"/>
+          <sim:Wait Time="DiffTime"/>
+          <Execute Statement="WriteString(SPCICommand)"/>
+          <Execute Statement="Result:= ReadFloat"/>
+        </RepeatUntilLoop>
+      </Block>
+    </Function>
+
+    <Property Identifier="TSiglentPowerSupply.Enabled" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TSPDChannel"/>
+      </Parameters>
+      <Getter>
+        <Case Expression="Channel">
+          <On Select="TSPDChannel.CH1">
+            <Execute Statement="WriteString(cSYSTemSTATusQuery)"/>
+            <Execute Statement="Result:= (ReadUInt32 and cBitOnOffCH1) = cBitOnOffCH1"/>
+          </On>
+          <On Select="TSPDChannel.CH2">
+            <Execute Statement="WriteString(cSYSTemSTATusQuery)"/>
+            <Execute Statement="Result:= (ReadUInt32 and cBitOnOffCH2) = cBitOnOffCH2"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="RaiseInvalidChannel"/>
+          </Otherwise>
+        </Case>
+      </Getter>
+      <Setter>
+        <Variable Identifier="ValueS" Type="ViString" Init="IfElse(Value, cOn, cOff)"/>
+        <Execute Statement="WriteString(cOUTPutCommand + ChannelVid(Channel)  + viComma + ValueS)"/>
+      </Setter>
+    </Property>
+
+    <Function Identifier="TSiglentPowerSupplyIniHelper.ConvReadVoltage" Type="ConvInt">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="string"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= ReadConvInt(Key, ucVoltage, Default)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TSiglentPowerSupplyIniHelper.ConvReadCurrent" Type="ConvInt">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="string"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= ReadConvInt(Key, ucCurrent, Default)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TSiglentPowerSupplyIniHelper.ReadSPDChannel" Type="TSPDChannel">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="TSPDChannel"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="DefaultString" Type="string" Init="TSiglentPowerSupply.ChannelTypeName(Default)"/>
+        <Variable Identifier="ResultS" Type="string" Init="Inifile.ReadString(CurrentSection, Key, DefaultString)"/>
+        <Execute Statement="Result:= TSiglentPowerSupply.ChannelTypeFromName(ResultS)"/>
+        <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentPowerSupply.ChannelTypeName(Result))" Condition="EnableEcho"/>
+      </Block>
+    </Function>
+
+    <Constructor Identifier="TSiglentPowerSupplyIniHelper.Create">
+      <Parameters>
+        <Parameter Identifier="Inifile" Type="TCustomIniFile"/>
+        <Parameter Identifier="EnableEcho" Type="Boolean"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="inherited Create(Inifile, EnableEcho)"/>
+      </Block>
+    </Constructor>
+
+  </Procedures>
+  
+  <Initialization>
+    <Execute Statement="ucVoltage:= TUnitConvertor.Create(TGranularity.Pico, TSiUnit.Volt)" />
+    <Execute Statement="ucActualVoltage:= ucVoltage" />
+    <Execute Statement="ucCurrent:= TUnitConvertor.Create(TGranularity.Pico, TSiUnit.Amp)" />
+    <Execute Statement="ucActualCurrent:= ucCurrent" />
+  </Initialization>
+
+  <Finalization>
+    <Free Identifier="SPDChannelTypeNameIndex"/>
+    <Free Identifier="SPDChannelVidIndex"/>
+  </Finalization>
+</pkg:Library>
