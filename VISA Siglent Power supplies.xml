@@ -35,7 +35,7 @@
     <DataClass Identifier="TSiglentSPD3303X" Inherit="TSiglentPowerSupply">
 
     </DataClass>
-    
+
     <DataClass Identifier="TSiglentSPD3303XE" Inherit="TSiglentSPD3303X">
 
     </DataClass>
@@ -47,9 +47,9 @@
     <Constant Identifier="cVidSPDChannelCH1" Type="ViString" Expression="'CH1'"/>
     <Constant Identifier="cVidSPDChannelCH2" Type="ViString" Expression="'CH2'"/>
     <Constant Identifier="cVidSPDChannelCH3" Type="ViString" Expression="'CH3'"/>
-    <Constant Identifier="cNameSPDChannelTypeCH1" Type="string" Expression="'CH1'"/>
-    <Constant Identifier="cNameSPDChannelTypeCH2" Type="string" Expression="'CH2'"/>
-    <Constant Identifier="cNameSPDChannelTypeCH3" Type="string" Expression="'CH3'"/>
+    <Constant Identifier="cNameSPDChannelCH1" Type="string" Expression="'CH1'"/>
+    <Constant Identifier="cNameSPDChannelCH2" Type="string" Expression="'CH2'"/>
+    <Constant Identifier="cNameSPDChannelCH3" Type="string" Expression="'CH3'"/>
     <Constant Identifier="cBitOnOffCH1" Type="UInt32" Expression="1 shl 4"/>
     <Constant Identifier="cBitOnOffCH2" Type="UInt32" Expression="1 shl 5"/>
     <Constant Identifier="cVOLTageQuery" Type="ViString" Expression="':VOLTage?'"/>
@@ -73,7 +73,7 @@
     <Variable Identifier="ucCurrent" Type="TUnitConvertor"/>
     <Variable Identifier="ucActualCurrent" Type="TUnitConvertor"/>
 
-    <Variable Identifier="SPDChannelTypeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
+    <Variable Identifier="SPDChannelNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
     <Variable Identifier="SPDChannelVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
   </Variables>
 
@@ -85,13 +85,13 @@
       <Block>
         <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', cIDNQuery)" Condition="DoReportVisa"/>
         <Execute Statement="VisaResource.AnsiWrite(cIDNQuery)"/>
-        <Variable Identifier="INR" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
-        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', INR)" Condition="DoReportVisa"/>
+        <Variable Identifier="IDN" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', IDN)" Condition="DoReportVisa"/>
         <Variable Identifier="Manufacturer" Type="ViString"/>
         <Variable Identifier="Model" Type="ViString"/>
         <Variable Identifier="Field3" Type="ViString"/>
         <Variable Identifier="Field4" Type="ViString"/>
-        <Raise Expression="Exception.Create(sErrorCouldNotDeterminePSU)" Condition="not DecodeINR(INR, Manufacturer, Model, Field3, Field4)"/>
+        <Raise Expression="Exception.Create(sErrorCouldNotDeterminePSU)" Condition="not DecodeIDN(IDN, Manufacturer, Model, Field3, Field4)"/>
         <!--<rep:Reporter.Information Text="Format('Manufacturer: %s', Manufacturer)"/>
         <rep:Reporter.Information Text="Format('Model: %s', Model)"/>
         <rep:Reporter.Information Text="Format('Field3: %s', Field3)"/>
@@ -131,13 +131,13 @@
       <Block>
         <Case Expression="Value" Optimalisation="integermapping">
           <On Select="TSPDChannel.CH1">
-            <Execute Statement="Result:= cNameSPDChannelTypeCH1"/>
+            <Execute Statement="Result:= cNameSPDChannelCH1"/>
           </On>
           <On Select="TSPDChannel.CH2">
-            <Execute Statement="Result:= cNameSPDChannelTypeCH2"/>
+            <Execute Statement="Result:= cNameSPDChannelCH2"/>
           </On>
           <On Select="TSPDChannel.CH3">
-            <Execute Statement="Result:= cNameSPDChannelTypeCH3"/>
+            <Execute Statement="Result:= cNameSPDChannelCH3"/>
           </On>
           <Otherwise>
             <Raise Expression="Exception.Create(sErrorInvalidChannel)"/>
@@ -197,10 +197,10 @@
           <ForLoop Indexer="I" From="TSPDChannel.Low" To="TSPDChannel.High">
             <inx:Index.MapValue Index="SPDChannelVidIndex" Key="ChannelVid(I)" Value="I"/>
           </ForLoop>
-          <Variable Identifier="Found" Type="Boolean"/>
-          <inx:Index.FindValue Index="SPDChannelVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
-          <Raise Expression="Exception.Create(sErrorInvalidChannel)" Condition="not Found"/>
         </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="SPDChannelVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidChannel)" Condition="not Found"/>
       </Block>
     </Function>
 
@@ -219,14 +219,14 @@
         <Parameter Identifier="Name" Type="string"/>
       </Parameters>
       <Block>
-        <Block Condition="IsEmpty(SPDChannelTypeNameIndex)">
-          <Execute Statement="SPDChannelTypeNameIndex:= TMappingCaseInSensitiveUnicodeStringToInt64.Create"/>
+        <Block Condition="IsEmpty(SPDChannelNameIndex)">
+          <Execute Statement="SPDChannelNameIndex:= TMappingCaseInSensitiveUnicodeStringToInt64.Create"/>
           <ForLoop Indexer="I" From="TSPDChannel.Low" To="TSPDChannel.High">
-            <inx:Index.MapValue Index="SPDChannelTypeNameIndex" Key="ChannelTypeName(I)" Value="I"/>
+            <inx:Index.MapValue Index="SPDChannelNameIndex" Key="ChannelTypeName(I)" Value="I"/>
           </ForLoop>
         </Block>
         <Variable Identifier="Found" Type="Boolean"/>
-        <inx:Index.FindValue Index="SPDChannelTypeNameIndex" Key="Name" Value="Result" Found="Found" Flags="NoErrorOnNotFound" />
+        <inx:Index.FindValue Index="SPDChannelNameIndex" Key="Name" Value="Result" Found="Found" Flags="NoErrorOnNotFound" />
         <Raise Expression="Exception.Create(sErrorInvalidChannel)" Condition="not Found"/>
       </Block>
     </Function>
@@ -404,7 +404,7 @@
     </Constructor>
 
   </Procedures>
-  
+
   <Initialization>
     <Execute Statement="ucVoltage:= TUnitConvertor.Create(TGranularity.Pico, TSiUnit.Volt)" />
     <Execute Statement="ucActualVoltage:= ucVoltage" />
@@ -413,7 +413,7 @@
   </Initialization>
 
   <Finalization>
-    <Free Identifier="SPDChannelTypeNameIndex"/>
+    <Free Identifier="SPDChannelNameIndex"/>
     <Free Identifier="SPDChannelVidIndex"/>
   </Finalization>
 </pkg:Library>

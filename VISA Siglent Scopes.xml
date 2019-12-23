@@ -38,15 +38,31 @@
 
     <Enumeration Identifier="TAcquireWay" Elements="Normal, PeakDetect, Average, HighRes" LowAlias="Low" HighAlias="High"/>
 
-    <Enumeration Identifier="TStatusFlags" Elements="SignalAcquired = 1 shl 0, TriggerIsReady = 1 shl 13"/>
+    <Enumeration Identifier="TStatusBit" Elements="SignalAcquired, TriggerIsReady = 13"/>
 
     <Enumeration Identifier="TWaveFormFormat" Elements="Dat2, All"/>
 
     <DataClass Identifier="TSiglentScope" Inherit="TVISAInstrument" ClassOfIdentifier="TTSiglentScope">
+      <VirtualMethod Identifier="vmFinalize" IsFinalizer="true"/>
       <VirtualMethod Identifier="vmSupportsTrace"/>
-      <Field Identifier="_SignalAcquiredStatusCnt" Type="UInt64"/>
-      <Field Identifier="_TriggerIsReadyStatusCnt" Type="UInt64"/>
+      <VirtualMethod Identifier="vmGetTDivNodes"/>
+      <Field Identifier="_StatusStates" Type="TBitCounter16"/>
     </DataClass>
+
+    <DataClass Identifier="TSiglentTDivNode">
+      <Field Identifier="convTDiv" Type="ConvInt"/>
+      <Field Identifier="Previous" Type="TSiglentTDivNode"/>
+      <Field Identifier="Next" Type="TSiglentTDivNode"/>
+      <Field Identifier="Less" Type="TSiglentTDivNode"/>
+      <Field Identifier="More" Type="TSiglentTDivNode"/>
+    </DataClass>
+    <!--
+100ns
+200ns
+500ns
+
+100s    
+    -->
 
     <DataClass Identifier="TSiglentScope2CH" Inherit="TSiglentScope" ClassOfIdentifier="TTSiglentScope2CH">
       <VirtualMethod Identifier="vmSupportsTrace" Override="true"/>
@@ -119,6 +135,7 @@
     <Constant Identifier="sErrorInvalidHeaderType" Type="string" Expression="'Invalid header'"/>
     <Constant Identifier="sErrorCouldNotDetermineScope" Type="string" Expression="'Could not determine the scope model'"/>
     <Constant Identifier="sErrorUnknownScope" Type="string" Expression="'Unknown scope model: '"/>
+    <Constant Identifier="sErrorInvalidCycles" Type="string" Expression="'Invalid cycles'"/>
 
     <Constant Identifier="c0" Type="AnsiChar" Expression="'0'"/>
     <Constant Identifier="cVDivisions" Type="UInt32" Expression="8"/>
@@ -269,7 +286,7 @@
     <Constant Identifier="cVOLT_DIVQuery" Type="ViString" Expression="':VOLT_DIV?'"/>
     <Constant Identifier="cVOLT_DIVCommand" Type="ViString" Expression="':VOLT_DIV '"/>
     <Constant Identifier="cTRIG_LEVELQuery" Type="ViString" Expression="'TRIG_LEVEL?'"/>
-    <Constant Identifier="cTRIG_LEVELCommand" Type="ViString" Expression="'TRIG_LEVEL '"/>
+    <Constant Identifier="cTRIG_LEVELCommand" Type="ViString" Expression="':TRIG_LEVEL '"/>
     <Constant Identifier="cVOFFSETQuery" Type="ViString" Expression="':OFFSET?'"/>
     <Constant Identifier="cVOFFSETCommand" Type="ViString" Expression="':OFFSET '"/>
     <Constant Identifier="cATTENUATIONQuery" Type="ViString" Expression="':ATTENUATION?'"/>
@@ -277,6 +294,8 @@
     <Constant Identifier="cSARAQuery" Type="ViString" Expression="'SARA?'"/>
     <Constant Identifier="cTRIG_SELECTQuery" Type="ViString" Expression="'TRIG_SELECT?'"/>
     <Constant Identifier="cTRIG_SELECTCommand" Type="ViString" Expression="'TRIG_SELECT '"/>
+    <Constant Identifier="cTRIG_SLOPEQuery" Type="ViString" Expression="'TRIG_SLOPE?'"/>
+    <Constant Identifier="cTRIG_SLOPECommand" Type="ViString" Expression="':TRIG_SLOPE '"/>
     <Constant Identifier="cChannelTRIG_LEVELCommand" Type="ViString" Expression="':TRIG_LEVEL '"/>
     <Constant Identifier="cTRIG_PATTERNQuery" Type="ViString" Expression="'TRIG_PATTERN?'"/>
     <Constant Identifier="cTRIG_PATTERNCommand" Type="ViString" Expression="'TRIG_PATTERN '"/>
@@ -290,7 +309,7 @@
     <Constant Identifier="cACQUIRE_WAYCommand" Type="ViString" Expression="'ACQUIRE_WAY '"/>
     <Constant Identifier="cSCDPCommand" Type="ViString" Expression="'SCDP'"/>
     <Constant Identifier="cTRACEQuery" Type="ViString" Expression="':TRACE?'"/>
-    <Constant Identifier="cTRACECommand" Type="ViString" Expression="':TRACE'"/>
+    <Constant Identifier="cTRACECommand" Type="ViString" Expression="':TRACE '"/>
     <Constant Identifier="cHISTORY_MODEQuery" Type="ViString" Expression="'HISTORY_MODE?'"/>
     <Constant Identifier="cHISTORY_MODECommand" Type="ViString" Expression="'HISTORY_MODE'"/>
     <Constant Identifier="cMEMORY_SIZEQuery" Type="ViString" Expression="'MEMORY_SIZE?'"/>
@@ -309,6 +328,7 @@
   <Variables>
     <Variable Identifier="ucTDiv" Type="TUnitConvertor" Init="TUnitConvertor.Create(TGranularity.Pico, TSiUnit.Second)"/>
     <Variable Identifier="ucTriggerDelay" Type="TUnitConvertor" Init="ucTDiv"/>
+    <Variable Identifier="ucCycleFrequency" Type="TUnitConvertor" Init="TUnitConvertor.Create(TGranularity.Milli, TSiUnit.Hz)"/>
 
     <Variable Identifier="ucVDiv" Type="TUnitConvertor" Init="TUnitConvertor.Create(TGranularity.Pico, TSiUnit.Volt)"/>
     <Variable Identifier="ucMathVDiv" Type="TUnitConvertor" Init="ucVDiv"/>
@@ -332,6 +352,9 @@
     <Variable Identifier="MemSizeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
     <Variable Identifier="TraceTypeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
     <Variable Identifier="TriggerModeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+    <Variable Identifier="SiglentScopeTDivHead" Type="TSiglentTDivNode"/>
+    <Variable Identifier="SiglentScopeTDivTail" Type="TSiglentTDivNode"/>
+    <Variable Identifier="SiglentScopeTDivRoot" Type="TSiglentTDivNode"/>
   </Variables>
 
   <Procedures>
@@ -342,13 +365,13 @@
       <Block>
         <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', cIDNQuery)" Condition="DoReportVisa"/>
         <Execute Statement="VisaResource.AnsiWrite(cIDNQuery)"/>
-        <Variable Identifier="INR" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
-        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', INR)" Condition="DoReportVisa"/>
+        <Variable Identifier="IDN" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', IDN)" Condition="DoReportVisa"/>
         <Variable Identifier="Manufacturer" Type="ViString"/>
         <Variable Identifier="Model" Type="ViString"/>
         <Variable Identifier="Field3" Type="ViString"/>
         <Variable Identifier="Field4" Type="ViString"/>
-        <Raise Expression="Exception.Create(sErrorCouldNotDetermineScope)" Condition="not DecodeINR(INR, Manufacturer, Model, Field3, Field4)"/>
+        <Raise Expression="Exception.Create(sErrorCouldNotDetermineScope)" Condition="not DecodeIDN(IDN, Manufacturer, Model, Field3, Field4)"/>
         <!--<rep:Reporter.Information Text="Format('Manufacturer: %s', Manufacturer)"/>
         <rep:Reporter.Information Text="Format('Model: %s', Model)"/>
         <rep:Reporter.Information Text="Format('Field3: %s', Field3)"/>
@@ -379,6 +402,194 @@
         </Choose>
       </Block>
     </Function>
+
+    <Function Identifier="TTSiglentScope.DivisionsPerScreen" Type="UInt32">
+      <Block>
+        <Execute Statement="Result := cHDivisions"/>
+      </Block>
+    </Function>
+
+    <FunctionHeader Identifier="TTSiglentScope.InternalGetTDivRootNode" Type="TSiglentTDivNode">
+      <Parameters>
+        <Parameter Identifier="Head" Type="TSiglentTDivNode"/>
+        <Parameter Identifier="Tail" Type="TSiglentTDivNode"/>
+      </Parameters>
+    </FunctionHeader>
+    <Implementation Identifier="TTSiglentScope.InternalGetTDivRootNode">
+      <Variables>
+        <Variable Identifier="Head2x" Type="TSiglentTDivNode"/>
+      </Variables>
+      <Block>
+        <Execute Statement="Result:= Head"/>
+        <Block Condition="Head = Tail">
+          <Execute Statement="Result.Less := ObjNil"/>
+          <Execute Statement="Result.More := ObjNil"/>
+          <Exit/>
+        </Block>
+        <Execute Statement="Head2x:= Head"/>
+        <RepeatUntilLoop Expression="Head2x = Tail">
+          <Execute Statement="Head2x:= Head2x.Next"/>
+          <Break Condition="Head2x = Tail"/>
+          <Execute Statement="Head2x:= Head2x.Next"/>
+          <Execute Statement="Result:= Result.Next"/>
+        </RepeatUntilLoop>
+        <Choose>
+          <When Expression="Result &lt;&gt; Head">
+            <Execute Statement="Result.Less := InternalGetTDivRootNode(Head, Result.Previous)"/>
+          </When>
+          <Otherwise>
+            <Execute Statement="Result.Less := ObjNil"/>
+          </Otherwise>
+        </Choose>
+        <Choose>
+          <When Expression="Result &lt;&gt; Tail">
+            <Execute Statement="Result.More := InternalGetTDivRootNode(Result.Next, Tail)"/>
+          </When>
+          <Otherwise>
+            <Execute Statement="Result.More := ObjNil"/>
+          </Otherwise>
+        </Choose>
+      </Block>
+    </Implementation>
+
+    <Function Identifier="TTSiglentScope.GetTDivRootNode" Type="TSiglentTDivNode">
+      <Parameters>
+        <Parameter Identifier="Head" Type="TSiglentTDivNode"/>
+        <Parameter Identifier="Tail" Type="TSiglentTDivNode"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="Previous" Type="TSiglentTDivNode" Init="ObjNil"/>
+        <lil:LinkedList.Iterate Head="Head" ItemType="TSiglentTDivNode" RunningItem="Item" Next="Item.Next">
+          <Execute Statement="Item.Previous:= Previous"/>
+          <Execute Statement="Previous:= Item"/>
+        </lil:LinkedList.Iterate>
+        <Execute Statement="Result:= InternalGetTDivRootNode(Head, Tail)"/>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TTSiglentScope.GetTDivNodes" VirtualMethod="vmGetTDivNodes">
+      <Parameters>
+        <Parameter Identifier="Head" Type="TSiglentTDivNode" Direction="Output"/>
+        <Parameter Identifier="Tail" Type="TSiglentTDivNode" Direction="Output"/>
+        <Parameter Identifier="Root" Type="TSiglentTDivNode" Direction="Output"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(SiglentScopeTDivHead)">
+          <Variable Identifier="Factor" Type="ConvInt" Init="100 * facNanoToPico"/>
+          <RepeatUntilLoop Expression="Factor &gt;= (100 * facToPico)">
+            <lil:LinkedList.LinkUp Head="SiglentScopeTDivHead" Item="TSiglentTDivNode.Create(Factor)" Tail="SiglentScopeTDivTail" TailLinkStatement="SiglentScopeTDivTail.Next:= Item"/>
+            <lil:LinkedList.LinkUp Head="SiglentScopeTDivHead" Item="TSiglentTDivNode.Create(Factor * 2)" Tail="SiglentScopeTDivTail" TailLinkStatement="SiglentScopeTDivTail.Next:= Item"/>
+            <lil:LinkedList.LinkUp Head="SiglentScopeTDivHead" Item="TSiglentTDivNode.Create(Factor * 5)" Tail="SiglentScopeTDivTail" TailLinkStatement="SiglentScopeTDivTail.Next:= Item"/>
+            <Execute Statement="Factor:= Factor * 10"/>
+          </RepeatUntilLoop>
+          <lil:LinkedList.LinkUp Head="SiglentScopeTDivHead" Item="TSiglentTDivNode.Create(Factor)" Tail="SiglentScopeTDivTail" TailLinkStatement="SiglentScopeTDivTail.Next:= Item"/>
+          <Execute Statement="SiglentScopeTDivRoot:= GetTDivRootNode(SiglentScopeTDivHead, SiglentScopeTDivTail)"/>
+        </Block>
+        <Execute Statement="Head:= SiglentScopeTDivHead"/>
+        <Execute Statement="Tail:= SiglentScopeTDivTail"/>
+        <Execute Statement="Root:= SiglentScopeTDivRoot"/>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="TTSiglentScope.InternalGetTDivNode" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Value" Type="ConvInt"/>
+        <Parameter Identifier="Root" Type="TSiglentTDivNode"/>
+        <Parameter Identifier="LowNode" Type="TSiglentTDivNode" Direction="Output"/>
+        <Parameter Identifier="HighNode" Type="TSiglentTDivNode" Direction="Output"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="PredNode" Type="TSiglentTDivNode" Init="ObjNil"/>
+        <Variable Identifier="SuccNode" Type="TSiglentTDivNode" Init="ObjNil"/>
+        <Variable Identifier="SearchNode" Type="TSiglentTDivNode" Init="Root"/>
+        <WhileLoop Expression="Assigned(SearchNode)">
+          <Choose>
+            <When Expression="Value &lt; SearchNode.convTDiv">
+              <Execute Statement="SuccNode:= SearchNode"/>
+              <Execute Statement="SearchNode:= SearchNode.Less"/>
+            </When>
+            <When Expression="Value &gt; SearchNode.convTDiv">
+              <Execute Statement="PredNode:= SearchNode"/>
+              <Execute Statement="SearchNode:= SearchNode.More"/>
+            </When>
+            <Otherwise>
+              <Execute Statement="LowNode:= SearchNode"/>
+              <Execute Statement="HighNode:= SearchNode"/>
+              <Exit Result="True"/>
+            </Otherwise>
+          </Choose>
+        </WhileLoop>
+        <Execute Statement="LowNode := PredNode"/>
+        <Execute Statement="HighNode := SuccNode"/>
+        <Execute Statement="Result := False"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.GetTDivNode" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Value" Type="ConvInt"/>
+        <Parameter Identifier="LowNode" Type="TSiglentTDivNode" Direction="Output"/>
+        <Parameter Identifier="HighNode" Type="TSiglentTDivNode" Direction="Output"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="Head" Type="TSiglentTDivNode"/>
+        <Variable Identifier="Tail" Type="TSiglentTDivNode"/>
+        <Variable Identifier="Root" Type="TSiglentTDivNode"/>
+        <Execute Statement="GetTDivNodes(Head, Tail, Root)"/>
+        <Execute Statement="Result := InternalGetTDivNode(Value, Root, LowNode, HighNode)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.ConvGetCyclesTDiv" Type="ConvInt">
+      <Parameters>
+        <Parameter Identifier="Frequency" Type="ConvInt"/>
+        <Parameter Identifier="Cycles" Type="UInt32"/>
+      </Parameters>
+      <Block>
+        <!--<Variable Identifier="Value" Type="ConvInt" Init="(facToPico * Cycles) div (Frequency * DivisionsPerScreen div facToPico)"/>-->
+        <Variable Identifier="Divider" Type="Int64" Init="(Frequency * DivisionsPerScreen)"/>
+        <Variable Identifier="Value" Type="ConvInt" Init="(facToPico * facToMilli * Cycles + Divider - 1) div Divider"/>
+        <Variable Identifier="LowNode" Type="TSiglentTDivNode"/>
+        <Variable Identifier="HighNode" Type="TSiglentTDivNode"/>
+        <rep:Reporter.Information Text="Format('Time: %s', ucTDiv.IntValueToStr(Value, TUnitPostFix.Separated, ','))" Condition="IsDebugging"/>
+        <Execute Statement="GetTDivNode(Value, LowNode, HighNode)"/>
+        <Raise Expression="Exception.Create(sErrorInvalidCycles)" Condition="not Assigned(HighNode)"/>
+        <Execute Statement="Result:= HighNode.convTDiv"/>
+      </Block>
+    </Function>
+    <!--
+function TInterpolater.FindNode(const Key: Extended; out LowNode, HighNode: PValueNodeRecord): Boolean;
+ var
+  PredNode: PValueNodeRecord;
+  SuccNode: PValueNodeRecord;
+  SearchNode: PValueNodeRecord;
+begin
+  PredNode := nil;
+  SuccNode := nil;
+  SearchNode := FRoot;
+  while Assigned(SearchNode) do
+  begin
+    if Key < SearchNode^.RecKey then
+    begin
+      SuccNode := SearchNode;
+      SearchNode := SearchNode^.RecLess;
+      Continue;
+    end;
+    if Key > SearchNode^.RecKey then
+    begin
+      PredNode := SearchNode;
+      SearchNode := SearchNode^.RecMore;
+      Continue;
+    end;
+    LowNode := SearchNode;
+    Exit(True);
+  end;
+  LowNode := PredNode;
+  HighNode := SuccNode;
+  Result := False;
+end;
+   
+    -->
 
     <Function Identifier="TTSiglentScope.SupportsTrace" Type="Boolean" IsDeterministic="true" VirtualMethod="vmSupportsTrace">
       <Parameters>
@@ -1083,10 +1294,10 @@
           <ForLoop Indexer="I" From="TAcquireWay.Low" To="TAcquireWay.High">
             <inx:Index.MapValue Index="AcquireWayVidIndex" Key="AcquireWayVid(I)" Value="I"/>
           </ForLoop>
-          <Variable Identifier="Found" Type="Boolean"/>
-          <inx:Index.FindValue Index="AcquireWayVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
-          <Raise Expression="Exception.Create(sErrorInvalidAcquireWay)" Condition="not Found"/>
         </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="AcquireWayVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidAcquireWay)" Condition="not Found"/>
       </Block>
     </Function>
 
@@ -1100,10 +1311,10 @@
           <ForLoop Indexer="I" From="TAvgTime.Low" To="TAvgTime.High">
             <inx:Index.MapValue Index="AvgTimeVidIndex" Key="AvgTimeVid(I)" Value="I"/>
           </ForLoop>
-          <Variable Identifier="Found" Type="Boolean"/>
-          <inx:Index.FindValue Index="AvgTimeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
-          <Raise Expression="Exception.Create(sErrorInvalidAvgTime)" Condition="not Found"/>
         </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="AvgTimeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidAvgTime)" Condition="not Found"/>
       </Block>
     </Function>
 
@@ -1117,10 +1328,10 @@
           <ForLoop Indexer="I" From="TChannelType.Low" To="TChannelType.High">
             <inx:Index.MapValue Index="ChannelTypeVidIndex" Key="ChannelTypeVid(I)" Value="I"/>
           </ForLoop>
-          <Variable Identifier="Found" Type="Boolean"/>
-          <inx:Index.FindValue Index="ChannelTypeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
-          <Raise Expression="Exception.Create(sErrorInvalidChannelType)" Condition="not Found"/>
         </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="ChannelTypeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidChannelType)" Condition="not Found"/>
       </Block>
     </Function>
 
@@ -1134,10 +1345,10 @@
           <ForLoop Indexer="I" From="THeaderType.Low" To="THeaderType.High">
             <inx:Index.MapValue Index="HeaderTypeVidIndex" Key="HeaderTypeVid(I)" Value="I"/>
           </ForLoop>
-          <Variable Identifier="Found" Type="Boolean"/>
-          <inx:Index.FindValue Index="HeaderTypeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
-          <Raise Expression="Exception.Create(sErrorInvalidHeaderType)" Condition="not Found"/>
         </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="HeaderTypeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidHeaderType)" Condition="not Found"/>
       </Block>
     </Function>
 
@@ -1151,10 +1362,10 @@
           <ForLoop Indexer="I" From="TMemSize.Low" To="TMemSize.High">
             <inx:Index.MapValue Index="MemSizeVidIndex" Key="MemSizeVid(I)" Value="I"/>
           </ForLoop>
-          <Variable Identifier="Found" Type="Boolean"/>
-          <inx:Index.FindValue Index="MemSizeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
-          <Raise Expression="Exception.Create(sErrorInvalidMemSize)" Condition="not Found"/>
         </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="MemSizeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidMemSize)" Condition="not Found"/>
       </Block>
     </Function>
 
@@ -1168,10 +1379,10 @@
           <ForLoop Indexer="I" From="TTraceType.Low" To="TTraceType.High">
             <inx:Index.MapValue Index="TraceTypeVidIndex" Key="TraceTypeVid(I)" Value="I"/>
           </ForLoop>
-          <Variable Identifier="Found" Type="Boolean"/>
-          <inx:Index.FindValue Index="TraceTypeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
-          <Raise Expression="Exception.Create(sErrorInvalidTraceType)" Condition="not Found"/>
         </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="TraceTypeVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidTraceType)" Condition="not Found"/>
       </Block>
     </Function>
 
@@ -1205,6 +1416,21 @@
         </Block>
       </Block>
     </Function>
+
+    <Constructor Identifier="TSiglentScope.Create">
+      <Parameters>
+        <Parameter Identifier="VisaResource" Type="TVisaResource"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="inherited Create(VisaResource)"/>
+        <Execute Statement="_StatusStates:= TBitCounter16.Create"/>
+      </Block>
+    </Constructor>
+    <Procedure Identifier="TSiglentScope.Finalize" VirtualMethod="vmFinalize">
+      <Block>
+        <Free Expression="_StatusStates"/>
+      </Block>
+    </Procedure>
 
     <Property Identifier="TSiglentScope.CommHeader" Type="THeaderType">
       <Getter>
@@ -1274,7 +1500,6 @@
         <Execute Statement="WriteString(cTRIG_PATTERNCommand + Value)"/>
       </Setter>
     </Property>
-
 
     <Property Identifier="TSiglentScope.Enabled" Type="Boolean">
       <Parameters>
@@ -1515,24 +1740,6 @@
       </Setter>
     </Property>
 
-    <Property Identifier="TSiglentScope.TriggerLevel" Type="Extended" >
-      <Getter>
-        <Execute Statement="Result:= QueryFloat(cTRIG_LEVELQuery)"/>
-      </Getter>
-      <Setter>
-        <Execute Statement="WriteString(cTRIG_LEVELCommand + FloatToCode(Value))"/>
-      </Setter>
-    </Property>
-
-    <Property Identifier="TSiglentScope.ConvTriggerLevel" Type="ConvInt" >
-      <Getter>
-        <Execute Statement="Result:= QueryConvInt(cTRIG_LEVELQuery, ucTriggerLevel)"/>
-      </Getter>
-      <Setter>
-        <Execute Statement="WriteString(cTRIG_LEVELCommand + ucTriggerLevel.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
-      </Setter>
-    </Property>
-
     <Property Identifier="TSiglentScope.TDiv" Type="Extended" >
       <Getter>
         <Variable Identifier="ValueS" Type="ViString" Init="QueryString(cTIME_DIVQuery)"/>
@@ -1630,6 +1837,36 @@
         <Execute Statement="Result:= QueryFloat(cSARAQuery)"/>
       </Getter>
     </Property>
+
+    <Procedure Identifier="TSiglentScope.SetConvTriggerLevel">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TChannelType"/>
+        <Parameter Identifier="Value" Type="ConvInt"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="WriteString(ChannelTypeVid(Channel) + cTRIG_LEVELCommand + ucTriggerLevel.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TSiglentScope.SetTriggerLevel">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TChannelType"/>
+        <Parameter Identifier="Value" Type="Extended"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="WriteString(ChannelTypeVid(Channel) + cTRIG_LEVELCommand + FloatToCode(Value))"/>
+      </Block>
+    </Procedure>
+    
+    <Procedure Identifier="TSiglentScope.SetTriggerSlope">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TChannelType"/>
+        <Parameter Identifier="Value" Type="ViString"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="WriteString(ChannelTypeVid(Channel) + cTRIG_SLOPECommand + Value)"/>
+      </Block>
+    </Procedure>
 
     <Procedure Identifier="TSiglentScope.ScreenCapureToFile">
       <Parameters>
@@ -1743,6 +1980,7 @@
       <Parameters>
         <Parameter Identifier="Trace" Type="TTraceType"/>
         <Parameter Identifier="Filename" Type="string"/>
+        <Parameter Identifier="LimitSamples" Type="Int32"/>
       </Parameters>
       <Variables>
         <Variable Identifier="XmlDoc" Type="IXMLDomDocument"/>
@@ -1772,6 +2010,7 @@
         <Variable Identifier="TraceName" Type="string" Init="TraceTypeName(Trace)"/>
         <sts:Status.Block Text="Format('Capturing waveform %s to file &quot;%s&quot;', TraceName, Filename)" LeaveText="Format('Done capturing waveform %s to file &quot;%s&quot;', TraceName, Filename)">
           <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
+          <Execute Statement="WaveSetup(0, LimitSamples)"/>
           <Object.Use Identifier="Stream" Type="TStream" Expression="WaveForm(Trace, 0, TWaveFormFormat.All)">
             <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
             <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', Stream.Size, (EndTime-StartTime)/QueryPerformanceFrequency, Stream.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Target="Visa" Condition="DoReportVisa"/>
@@ -1854,7 +2093,7 @@
                         <Execute Statement="Stream.Position:= BlockStart + coNumberOfPointsOffset"/>
                         <Raise Condition="Stream.ReadDataUInt32(NumberOfPoints) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
                         <rep:Reporter.Information Text="Format('Nr. of points: %d', NumberOfPoints)" Target="Visa" Condition="DoReportVisa"/>
-
+                        <Execute Statement="NumberOfPoints:= LimitSamples" Condition="(LimitSamples &lt;&gt; 0) and (LimitSamples &lt; NumberOfPoints)"/>
 
                         <Execute Statement="Stream.Position:= BlockStart + coWaveSizeOffset"/>
                         <Raise Condition="Stream.ReadDataUInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
@@ -1908,7 +2147,7 @@
                         <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
                         <rep:Reporter.Information Text="Format('HorizontalOffset: %g', FloatValue)" Target="Visa" Condition="DoReportVisa"/>
                         <msx:Element.SetAttribute Element="DataE" Name="HOffset" Value="FloatToCode(FloatValue)"/>
-                        <Execute Statement="Time:= FloatValue - NumberOfPoints * TimePerSample * 0.5"/>
+                        <Execute Statement="Time:= FloatValue - PointsPerScreen * TimePerSample * 0.5"/>
 
                         <!--<Execute Statement="Stream.Position:= BlockStart + coSegmentIndexOffset"/>
                         <Raise Condition="Stream.ReadDataInt32(Int32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
@@ -2164,7 +2403,7 @@
                         <Execute Statement="Stream.Position:= BlockStart + coHorizontalOffsetOffset"/>
                         <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
                         <rep:Reporter.Information Text="Format('HorizontalOffset: %g', FloatValue)" Target="Visa" Condition="DoReportVisa"/>
-                        <Execute Statement="AcquisitionInfo.Time:= FloatValue - NumberOfPoints * TimePerSample * 0.5"/>
+                        <Execute Statement="AcquisitionInfo.Time:= FloatValue - PointsPerScreen * TimePerSample * 0.5"/>
                         <Execute Statement="AcquisitionInfo.HOffset:= FloatValue"/>
 
                         <Execute Statement="Stream.Position:= BlockStart + coSegmentIndexOffset"/>
@@ -2246,20 +2485,18 @@
           </Block>
           <Execute Statement="Result.Count:= FrameHighIndex"/>
           <Execute Statement="WaveSetup(0, LimitSamples)"/>
-          <Object.Use Identifier="Stream" Type="TSafeArrayStream" Expression="TSafeArrayStream.Create">
-            <ForLoop Indexer="ActiveFrameIndex" From="1" To="FrameHighIndex">
-              <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
-              <ExitOnAbortRequest/>
-              <Object.Use Identifier="Stream" Type="TStream" Expression="WaveForm(Trace, ActiveFrameIndex, WaveFormFormat)">
-                <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
-                <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', Stream.Size, (EndTime-StartTime)/QueryPerformanceFrequency, Stream.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Target="Visa" Condition="DoReportVisa"/>
-                <sts:Status.Block Text="Format('Processing %d bytes of segment %d', Stream.Size, ActiveFrameIndex)" LeaveText="Format('Done processing data of segment %d', ActiveFrameIndex)">
-                  <Execute Statement="LoadSamplesFromStream(Result, Stream, LimitSamples)"/>
-                </sts:Status.Block>
-              </Object.Use>
-              <Execute Statement="WaveFormFormat:= TWaveFormFormat.Dat2"/>
-            </ForLoop>
-          </Object.Use>
+          <ForLoop Indexer="ActiveFrameIndex" From="1" To="FrameHighIndex">
+            <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
+            <ExitOnAbortRequest/>
+            <Object.Use Identifier="Stream" Type="TStream" Expression="WaveForm(Trace, ActiveFrameIndex, WaveFormFormat)">
+              <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
+              <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', Stream.Size, (EndTime-StartTime)/QueryPerformanceFrequency, Stream.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Target="Visa" Condition="DoReportVisa"/>
+              <sts:Status.Block Text="Format('Processing %d bytes of segment %d', Stream.Size, ActiveFrameIndex)" LeaveText="Format('Done processing data of segment %d', ActiveFrameIndex)">
+                <Execute Statement="LoadSamplesFromStream(Result, Stream, LimitSamples)"/>
+              </sts:Status.Block>
+            </Object.Use>
+            <Execute Statement="WaveFormFormat:= TWaveFormFormat.Dat2"/>
+          </ForLoop>
         </sts:Status.Block>
       </Block>
     </Function>
@@ -2317,29 +2554,28 @@
       </Block>
     </Procedure>
 
-    <Procedure Identifier="TSiglentScope.CheckStatus">
-      <Block>
-        <Execute Statement="WriteString(cINRQuery)"/>
-        <Variable Identifier="StatusFlags" Type="UInt32" Init="ReadUInt32"/>
-        <Execute Statement="_SignalAcquiredStatusCnt:= _SignalAcquiredStatusCnt + 1" Condition="(StatusFlags and TStatusFlags.SignalAcquired) = TStatusFlags.SignalAcquired"/>
-        <Execute Statement="_TriggerIsReadyStatusCnt:= _TriggerIsReadyStatusCnt + 1" Condition="(StatusFlags and TStatusFlags.TriggerIsReady) = TStatusFlags.TriggerIsReady"/>
-      </Block>
-    </Procedure>
-
-    <Procedure Identifier="TSiglentScope.CheckStatus">
+    <Property Identifier="TSiglentScope.StatusState" Type="TRegisterState">
       <Parameters>
-        <Parameter Identifier="SignalAcquiredStatusCnt" Type="UInt64" Direction="Output"/>
-        <Parameter Identifier="TriggerIsReadyStatusCnt" Type="UInt64" Direction="Output"/>
+        <Parameter Identifier="Bit" Type="TStatusBit"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="_StatusStates.Update(QueryUInt32(cINRQuery))"/>
+        <Execute Statement="Result:= _StatusStates[Bit]"/>
+      </Getter>
+    </Property>
+
+    <Function Identifier="TSiglentScope.StatusChanged" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Bit" Type="TStatusBit"/>
+        <Parameter Identifier="State" Type="TRegisterState" Direction="InputOutput"/>
       </Parameters>
       <Block>
-        <Execute Statement="WriteString(cINRQuery)"/>
-        <Variable Identifier="StatusFlags" Type="UInt32" Init="ReadUInt32"/>
-        <Execute Statement="_SignalAcquiredStatusCnt:= _SignalAcquiredStatusCnt + 1" Condition="(StatusFlags and TStatusFlags.SignalAcquired) = TStatusFlags.SignalAcquired"/>
-        <Execute Statement="_TriggerIsReadyStatusCnt:= _TriggerIsReadyStatusCnt + 1" Condition="(StatusFlags and TStatusFlags.TriggerIsReady) = TStatusFlags.TriggerIsReady"/>
-        <Execute Statement="SignalAcquiredStatusCnt:= _SignalAcquiredStatusCnt"/>
-        <Execute Statement="TriggerIsReadyStatusCnt:= _TriggerIsReadyStatusCnt"/>
+        <Execute Statement="_StatusStates.Update(QueryUInt32(cINRQuery))"/>
+        <Variable Identifier="NewState" Type="UInt64" Init="_StatusStates[Bit]"/>
+        <Execute Statement="Result:= NewState &lt;&gt; State"/>
+        <Execute Statement="State:= NewState"/>
       </Block>
-    </Procedure>
+    </Function>
 
     <Procedure Identifier="TSiglentScope.SetAverageMode">
       <Parameters>
@@ -2350,6 +2586,16 @@
       </Block>
     </Procedure>
 
+    <Function Identifier="TSiglentScope.GetCycleSamples" Type="Integer">
+      <Parameters>
+        <Parameter Identifier="Frequency" Type="ConvInt"/>
+        <Parameter Identifier="Cycles" Type="UInt32"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= Round(Cycles * SampleRate / ucCycleFrequency.IntValueToExtended(Frequency))"/>
+      </Block>
+    </Function>
+
     <Function Identifier="TSiglentScopeIniHelper.ConvReadTDiv" Type="ConvInt">
       <Parameters>
         <Parameter Identifier="Key" Type="string"/>
@@ -2357,6 +2603,16 @@
       </Parameters>
       <Block>
         <Execute Statement="Result:= ReadConvInt(Key, ucTDiv, Default)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TSiglentScopeIniHelper.ConvReadCycleFrequency" Type="ConvInt">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="string"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= ReadConvInt(Key, ucCycleFrequency, Default)"/>
       </Block>
     </Function>
 

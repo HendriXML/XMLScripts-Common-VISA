@@ -23,6 +23,8 @@
 
   <Type>
     <Alias Identifier="TMappingCaseInSensitiveViStringToInt64" RefersTo="TMappingCaseInSensitiveStringToInt64"/>
+    <Alias Identifier="TRegisterState" RefersTo="UInt64"/>
+
     <Enumeration Identifier="TVisaAttributeState" Elements="NoValue, ValidValue, InvalidValue, PendingChange"/>
 
     <DataClass Identifier="TVisaInstrument" ClassOfIdentifier="TTVisaInstrument">
@@ -82,6 +84,8 @@
     <Constant Identifier="viComma" Type="ViString" Expression="','"/>
     <Constant Identifier="viDecimalSeperatior" Type="string" Expression="'.'"/>
     <Constant Identifier="sErrorUnsupportedOperation" Type="string" Expression="'Unsupported operation'"/>
+    <Constant Identifier="sOn" Type="ViString" Expression="'ON'"/>
+    <Constant Identifier="sOff" Type="ViString" Expression="'OFF'"/>
   </Constants>
 
   <Variables>
@@ -90,7 +94,7 @@
 
   <Procedures>
 
-    <Function Identifier="TTVisaInstrument.DecodeINR" Type="Boolean" IsDeterministic="true">
+    <Function Identifier="TTVisaInstrument.DecodeIDN" Type="Boolean" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Value" Type="ViString"/>
         <Parameter Identifier="Field1" Type="ViString" Direction="Output"/>
@@ -345,7 +349,14 @@
       <Block>
         <Variable Identifier="readResult" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
         <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', readResult)" Condition="DoReportVisa"/>
-        <Execute Statement="Result:= StrToInt(readResult)"/>
+        <Execute Statement="Result:= StrToUInt(readResult)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TVISAInstrument.ReadSTB" Type="UInt32">
+      <Block>
+        <Execute Statement="Result:= VisaResource.ReadSTB"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('ReadSTB: %u', Result)" Condition="DoReportVisa"/>
       </Block>
     </Function>
 
@@ -369,6 +380,18 @@
         <Variable Identifier="ResultS" Type="ViString" Init="VisaResource.AnsiQueryNoLF(Query)"/>
         <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', ResultS)" Condition="DoReportVisa"/>
         <Execute Statement="Result:= CodeToFloat(ResultS)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TVISAInstrument.QueryUInt32" Type="UInt32">
+      <Parameters>
+        <Parameter Identifier="Query" Type="ViString"/>
+      </Parameters>
+      <Block>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Query)" Condition="DoReportVisa"/>
+        <Variable Identifier="readResult" Type="ViString" Init="VisaResource.AnsiQueryNoLF(Query)"/>
+        <rep:Reporter.Information Target="Visa" Text="Format('Received: %s', readResult)" Condition="DoReportVisa"/>
+        <Execute Statement="Result:= StrToUInt(readResult)"/>
       </Block>
     </Function>
 
@@ -403,12 +426,29 @@
     </Procedure>
 
     <Function Identifier="TVISAInstrument.ReadOnOff" Type="Boolean">
-      <Constants>
-        <Constant Identifier="sOn" Type="ViString" Expression="'ON'"/>
-        <Constant Identifier="sOff" Type="ViString" Expression="'OFF'"/>
-      </Constants>
       <Block>
         <Variable Identifier="readResult" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
+        <Choose>
+          <When Expression="readResult = sOn">
+            <Execute Statement="Result:= True"/>
+          </When>
+          <When Expression="readResult = sOff">
+            <Execute Statement="Result:= False"/>
+          </When>
+          <Otherwise>
+            <Raise Expression="Exception.Create('Invalid on/off value: ' + readResult)"/>
+          </Otherwise>
+        </Choose>
+      </Block>
+    </Function>
+
+    <Function Identifier="TVISAInstrument.QueryOnOff" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Query" Type="ViString"/>
+      </Parameters>
+      <Block>
+        <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Query)" Condition="DoReportVisa"/>
+        <Variable Identifier="readResult" Type="ViString" Init="VisaResource.AnsiQueryNoLF(Query)"/>
         <Choose>
           <When Expression="readResult = sOn">
             <Execute Statement="Result:= True"/>
@@ -428,12 +468,8 @@
         <Parameter Identifier="Parameter" Type="ViString"/>
         <Parameter Identifier="Value" Type="Boolean"/>
       </Parameters>
-      <Constants>
-        <Constant Identifier="sOn" Type="ViString" Expression="'ON'"/>
-        <Constant Identifier="sOff" Type="ViString" Expression="'OFF'"/>
-      </Constants>
       <Block>
-        <Variable Identifier="Command" Type="ViString" Init="AnsiFormat('%s %s', Parameter, IfElse(Value, sOn, sOff))"/>
+        <Variable Identifier="Command" Type="ViString" Init="Parameter + IfElse(Value, sOn, sOff)"/>
         <rep:Reporter.Information Target="Visa" Text="Format('Sending: %s', Command)" Condition="DoReportVisa"/>
         <Execute Statement="VisaResource.AnsiWrite(Command)"/>
       </Block>
