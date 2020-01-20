@@ -1,0 +1,1008 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<pkg:Library
+  xsi:schemaLocation="urn:schemas-www-wisware.nl-scriptingpackages ../XmlSchemas.Common.XmlScript/XMLScripting.Packages.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:pkg="urn:schemas-www-wisware.nl-scriptingpackages"
+  xmlns:sys="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:ado="urn:schemas-www-wisware.nl-xmlscripting-ado"
+  xmlns:fil="urn:schemas-www-wisware.nl-xmlscripting-filemanagement"
+  xmlns:fwl="urn:schemas-www-wisware.nl-xmlscripting-windowsfirewall"
+  xmlns:inx="urn:schemas-www-wisware.nl-xmlscripting-index"
+  xmlns:lil="urn:schemas-www-wisware.nl-xmlscripting-linkedlist"
+  xmlns:msx="urn:schemas-www-wisware.nl-xmlscripting-xml"
+  xmlns:reg="urn:schemas-www-wisware.nl-xmlscripting-registry"
+  xmlns:rep="urn:schemas-www-wisware.nl-xmlscripting-report"
+  xmlns:sts="urn:schemas-www-wisware.nl-xmlscripting-showstatus"
+  xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
+  xmlns:stm="urn:schemas-www-wisware.nl-xmlscripting-statemanagement">
+  <Uses>
+    <Use Identifier="ElectronicUtils"/>
+    <Use Identifier="VISAInstrument"/>
+  </Uses>
+
+  <Type>
+    <DataClass.Forwarded Identifier="TKeithleyDMM6500" ClassOfIdentifier="TTKeithleyDMM6500"/>
+    <Enumeration Identifier="TRegisterBit" Elements="B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14"/>
+    <Enumeration Identifier="TRegisterBits" Elements="B0=1, B1=2, B2=4, B3=8, B4=16, B5=32, B6=64, B7=128, B8=256, B9=512, B10=1024, B11=2048, B12=4096, B13=8192, B14=16384"/>
+
+    <Alias Identifier="TOperationRegisterBit" RefersTo="TRegisterBit"/>
+    <Alias Identifier="TOperationRegisterBits" RefersTo="TRegisterBits"/>
+
+    <Enumeration Identifier="TEventCode" Elements="InfoMessage3 = 2736, InfoMessage4"/>
+    
+    <Enumeration Identifier="TTriggerPulse" Elements="Low, High"/>
+
+    <Enumeration Identifier="TInputImpedance" Elements="MOhm10, Auto" LowAlias="Low" HighAlias="High"/>
+
+    <Enumeration Identifier="TSenseFunction" Elements="DCVoltage, Resistance, Temperature, DCVoltageRatio, ACVoltage, FourWireResistance, Continuity, DigitizeVoltage, DCCurrent, Diode, ACFrequency, DigitizeCurrent, ACCurrent, Capacitance, ACPeriod" LowAlias="Low" HighAlias="High"/>
+    <Enumeration Identifier="TDigitizeFunction" Elements="Voltage, Current" LowAlias="Low" HighAlias="High"/>
+    <Enumeration Identifier="TOutputFormat" Elements="Acii, Real"/>
+    <Enumeration Identifier="TDmmSTB" Elements="MSB, EAV = 2, QSB, MAV, ESB, OSB = 7"/>
+    <Enumeration Identifier="TDmmSTBFlag" Elements="MSB = 1 shl TDmmSTB.MSB, EAV = 1 shl TDmmSTB.EAV, QSB = 1 shl TDmmSTB.QSB, MAV = 1 shl TDmmSTB.MAV, ESB = 1 shl TDmmSTB.ESB, OSB = 1 shl TDmmSTB.OSB"/>
+
+    <DataClass Identifier="TBaseMeasurementElement">
+      <Field Identifier="_Next" Type="TBaseMeasurementElement"/>
+    </DataClass>
+
+    <DataClass Identifier="TBaseMeasurementQuery">
+      <VirtualMethod Identifier="vmActivate"/>
+      <Field Identifier="_DMM" Type="TKeithleyDMM6500"/>
+      <Field Identifier="_VisaResource" Type="TVisaResource"/>
+      <Field Identifier="_Active" Type="Boolean"/>
+      <Field Identifier="_Prepared" Type="Boolean"/>
+      <Field Identifier="_RequestRelativeTime" Type="Boolean"/>
+      <Field Identifier="_RequestValue" Type="Boolean"/>
+      <Field Identifier="_RequestExtraValue" Type="Boolean"/>
+      <Field Identifier="_IsValidRelativeTime" Type="Boolean"/>
+      <Field Identifier="_IsValidValue" Type="Boolean"/>
+      <Field Identifier="_IsValidExtraValue" Type="Boolean"/>
+      <Field Identifier="_Parameters" Type="ViString"/>
+      <Field Identifier="_BufferName" Type="ViString"/>
+    </DataClass>
+
+    <DataClass Identifier="TAsciiMeasurementQuery" Inherit="TBaseMeasurementQuery">
+      <VirtualMethod Identifier="vmActivate" Override="true"/>
+    </DataClass>
+
+    <DataClass Identifier="TRealMeasurementQuery" Inherit="TBaseMeasurementQuery">
+      <VirtualMethod Identifier="vmActivate" Override="true"/>
+      <Field Identifier="_RelativeTime" Type="Double"/>
+      <Field Identifier="_Value" Type="Double"/>
+      <Field Identifier="_ExtraValue" Type="Double"/>
+    </DataClass>
+
+    <DataClass Identifier="TBaseTMA">
+      <VirtualMethod Identifier="vmInit"/>
+      <VirtualMethod Identifier="vmExecute"/>
+      <Field Identifier="Next" Type="TBaseTMA"/>
+    </DataClass>
+
+    <DataClass Identifier="TBaseBlockTMA" Inherit="TBaseTMA">
+      <VirtualMethod Identifier="vmInit" Override="true"/>
+      <Field Identifier="_BlockSequence" Type="UInt32"/>
+    </DataClass>
+
+    <DataClass Identifier="TNotifyTMA" Inherit="TBaseBlockTMA" DefaultConstructor="createonly">
+      <VirtualMethod Identifier="vmExecute" Override="true"/>
+      <Field Identifier="NotifyID" Type="UInt32"/>
+    </DataClass>
+
+    <DataClass Identifier="TDigitizeTMA" Inherit="TBaseBlockTMA" DefaultConstructor="createonly">
+      <VirtualMethod Identifier="vmExecute" Override="true"/>
+    </DataClass>
+
+    <DataClass Identifier="TExternalTriggerPulseTMA" Inherit="TBaseTMA" DefaultConstructor="createonly">
+      <VirtualMethod Identifier="vmExecute" Override="true"/>
+      <Field Identifier="TriggerPulse" Type="TTriggerPulse"/>
+    </DataClass>
+
+    <DataClass Identifier="TExternalTriggerNotificationStimulusTMA" Inherit="TBaseTMA" DefaultConstructor="createonly">
+      <VirtualMethod Identifier="vmExecute" Override="true"/>
+      <Field Identifier="NotifyID" Type="UInt32"/>
+    </DataClass>
+
+    <DataClass Identifier="TTriggerModel">
+      <VirtualMethod Identifier="vmFinalize" IsFinalizer="true"/>
+      <Field Identifier="Head" Type="TBaseTMA"/>
+      <Field Identifier="Tail" Type="TBaseTMA"/>
+    </DataClass>
+
+    <DataClass Identifier="TKeithleyDMM6500" Inherit="TVISAInstrument">
+      <VirtualMethod Identifier="vmFinalize" IsFinalizer="true"/>
+      <Field Identifier="_ActiveQuery" Type="TBaseMeasurementQuery"/>
+      <Field Identifier="_DataFormat" Type="TOutputFormat"/>
+      <Field Identifier="_StatusStates" Type="TBitCounter8"/>
+      <Field Identifier="_OperationStates" Type="TBitCounter16"/>
+      <Field Identifier="_QuestionableStates" Type="TBitCounter16"/>
+    </DataClass>
+
+  </Type>
+
+  <Constants>
+    <Constant Identifier="sErrorCouldNotDetermineDmm" Type="string" Expression="'Could not determine the dmm model'"/>
+    <Constant Identifier="sErrorUnknownDmm" Type="string" Expression="'Unknown dmm model: '"/>
+    <Constant Identifier="sErrorMeasurementQueryNotActive" Type="string" Expression="'Measurement query not active'"/>
+    <Constant Identifier="sErrorReadingInvalidMeasurementField" Type="string" Expression="'Error reading measurement field'"/>
+    <Constant Identifier="sErrorReadingMeasurementData" Type="string" Expression="'Error reading measurement data'"/>
+    <Constant Identifier="sErrorInvalidSenseFunction" Type="string" Expression="'Invalid SenseFunction'"/>
+    <Constant Identifier="sErrorInvalidDigitizeFunction" Type="string" Expression="'Invalid DigitizeFunction'"/>
+    <Constant Identifier="sErrorInvalidInputImpedance" Type="string" Expression="'Invalid InputImpedance'"/>
+
+    <Constant Identifier="cVidSenseFunctionDCVoltage" Type="ViString" Expression="'VOLT:DC'"/>
+    <Constant Identifier="cVidSenseFunctionResistance" Type="ViString" Expression="'RES'"/>
+    <Constant Identifier="cVidSenseFunctionTemperature" Type="ViString" Expression="'TEMP'"/>
+    <Constant Identifier="cVidSenseFunctionDCVoltageRatio" Type="ViString" Expression="'VOLT:DC:RAT'"/>
+    <Constant Identifier="cVidSenseFunctionACVoltage" Type="ViString" Expression="'VOLT:AC'"/>
+    <Constant Identifier="cVidSenseFunctionFourWireResistance" Type="ViString" Expression="'FRES'"/>
+    <Constant Identifier="cVidSenseFunctionContinuity" Type="ViString" Expression="'CONT'"/>
+    <Constant Identifier="cVidSenseFunctionDigitizeVoltage" Type="ViString" Expression="'DIGITIZE:VOLTAGE'"/>
+    <Constant Identifier="cVidSenseFunctionDCCurrent" Type="ViString" Expression="'CURR:DC'"/>
+    <Constant Identifier="cVidSenseFunctionDiode" Type="ViString" Expression="'DIOD'"/>
+    <Constant Identifier="cVidSenseFunctionACFrequency" Type="ViString" Expression="'FREQ:VOLT'"/>
+    <Constant Identifier="cVidSenseFunctionDigitizeCurrent" Type="ViString" Expression="'DIGITIZE:CURRENT'"/>
+    <Constant Identifier="cVidSenseFunctionACCurrent" Type="ViString" Expression="'CURR:AC'"/>
+    <Constant Identifier="cVidSenseFunctionCapacitance" Type="ViString" Expression="'CAP'"/>
+    <Constant Identifier="cVidSenseFunctionACPeriod" Type="ViString" Expression="'PER:VOLT'"/>
+
+    <Constant Identifier="cVidDigitizeFunctionVoltage" Type="ViString" Expression="'VOLT'"/>
+    <Constant Identifier="cVidDigitizeFunctionCurrent" Type="ViString" Expression="'CURR'"/>
+
+    <Constant Identifier="cVidInputImpedanceMOhm10" Type="ViString" Expression="'MOHM10 '"/>
+    <Constant Identifier="cVidInputImpedanceAuto" Type="ViString" Expression="'AUTO'"/>
+
+    <Constant Identifier="cVidOutputFormatAcii" Type="ViString" Expression="'ASCII'"/>
+    <Constant Identifier="cVidOutputFormatReal" Type="ViString" Expression="'REAL'"/>
+
+    <Constant Identifier="cVidElementValue" Type="ViString" Expression="'READ'"/>
+    <Constant Identifier="cVidElementRelativeTime" Type="ViString" Expression="'REL'"/>
+    <Constant Identifier="cVidElementExtraValue" Type="ViString" Expression="'EXTR'"/>
+
+    <Constant Identifier="cVidNone" Type="ViString" Expression="'NONE'"/>
+
+    <Constant Identifier="cFormatCommand" Type="ViString" Expression="':FORMAT '"/>
+    <Constant Identifier="cFetchQuery" Type="ViString" Expression="':FETCh?'"/>
+    <Constant Identifier="cStatusOperationQuery" Type="ViString" Expression="':STATUS:OPERATION?'"/>
+    <Constant Identifier="cInitiateModelCommand" Type="ViString" Expression="':INITIATE'"/>
+    <Constant Identifier="cAbortModelCommand" Type="ViString" Expression="':ABORT'"/>
+    <Constant Identifier="cRefreshReferenceCommand" Type="ViString" Expression="':AZERo:ONCE'"/>
+    <Constant Identifier="cEventToOperationCommand" Type="ViString" Expression="':STATUS:OPERATION:MAP %u, %u'"/>
+    <Constant Identifier="cOperationRegisterCascadeMaskCommand" Type="ViString" Expression="':STATUS:OPERATION:ENABLE %u'"/>
+    <Constant Identifier="cOperationRegisterCascadeMaskQuery" Type="ViString" Expression="':STATUS:OPERATION:ENABLE?'"/>
+    <Constant Identifier="cClearBufferCommand" Type="ViString" Expression="'TRACe:CLEar &quot;%s&quot;'"/>
+    <Constant Identifier="cClearEventlogCommand" Type="ViString" Expression="':SYSTEM:CLEAR'"/>
+    <Constant Identifier="cClearStatusRegisters" Type="ViString" Expression="':STATUS:CLEAR'"/>
+    <Constant Identifier="cSenseFunctionQuery" Type="ViString" Expression="':FUNC?'"/>
+    <Constant Identifier="cSenseFunctionCommand" Type="ViString" Expression="':FUNC &quot;%s&quot;'"/>
+    <Constant Identifier="cNPLCyclesQuery" Type="ViString" Expression="':NPLCycles?'"/>
+    <Constant Identifier="cNPLCyclesCommand" Type="ViString" Expression="':NPLCycles '"/>
+    <Constant Identifier="cApertureQuery" Type="ViString" Expression="':APERture ?'"/>
+    <Constant Identifier="cApertureCommand" Type="ViString" Expression="':APERture '"/>
+    <Constant Identifier="cDigitizeFunctionQuery" Type="ViString" Expression="':DIG:FUNC?'"/>
+    <Constant Identifier="cDigitizeFunctionCommand" Type="ViString" Expression="':DIG:FUNC &quot;%s&quot;'"/>
+    <Constant Identifier="cInputImpedanceCommand" Type="ViString" Expression="':INPutimpedance '"/>
+    <Constant Identifier="cInputImpedanceQuery" Type="ViString" Expression="':INPutimpedance?'"/>
+    <Constant Identifier="cTriggerCommand" Type="ViString" Expression="'*TRG'"/>
+    <Constant Identifier="cWaitCommand" Type="ViString" Expression="'*WAI'"/>
+
+    <Constant Identifier="cDefaultBuffer" Type="ViString" Expression="'defbuffer1'"/>
+    <Constant Identifier="cSizeByte" Type="NativeInt" Expression="1"/>
+    <Constant Identifier="cSizeUInt16" Type="NativeInt" Expression="2"/>
+    <Constant Identifier="cSizeDouble" Type="NativeInt" Expression="8"/>
+  </Constants>
+  <Variables>
+    <Variable Identifier="ucAperture" Type="TUnitConvertor" Init="TUnitConvertor.Create(TGranularity.Micro, TSiUnit.Second)"/>
+    <Variable Identifier="SenseFunctionVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+    <Variable Identifier="DigitizeFunctionVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+    <Variable Identifier="InputImpedanceVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+  </Variables>
+
+  <Procedures>
+    <Function Identifier="TTKeithleyDMM6500.SenseFunctionVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TSenseFunction"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TSenseFunction.DCVoltage">
+            <Execute Statement="Result:= cVidSenseFunctionDCVoltage"/>
+          </On>
+          <On Select="TSenseFunction.Resistance">
+            <Execute Statement="Result:= cVidSenseFunctionResistance"/>
+          </On>
+          <On Select="TSenseFunction.Temperature">
+            <Execute Statement="Result:= cVidSenseFunctionTemperature"/>
+          </On>
+          <On Select="TSenseFunction.DCVoltageRatio">
+            <Execute Statement="Result:= cVidSenseFunctionDCVoltageRatio"/>
+          </On>
+          <On Select="TSenseFunction.ACVoltage">
+            <Execute Statement="Result:= cVidSenseFunctionACVoltage"/>
+          </On>
+          <On Select="TSenseFunction.FourWireResistance">
+            <Execute Statement="Result:= cVidSenseFunctionFourWireResistance"/>
+          </On>
+          <On Select="TSenseFunction.Continuity">
+            <Execute Statement="Result:= cVidSenseFunctionContinuity"/>
+          </On>
+          <On Select="TSenseFunction.DigitizeVoltage">
+            <Execute Statement="Result:= cVidSenseFunctionDigitizeVoltage"/>
+          </On>
+          <On Select="TSenseFunction.DCCurrent">
+            <Execute Statement="Result:= cVidSenseFunctionDCCurrent"/>
+          </On>
+          <On Select="TSenseFunction.Diode">
+            <Execute Statement="Result:= cVidSenseFunctionDiode"/>
+          </On>
+          <On Select="TSenseFunction.ACFrequency">
+            <Execute Statement="Result:= cVidSenseFunctionACFrequency"/>
+          </On>
+          <On Select="TSenseFunction.DigitizeCurrent">
+            <Execute Statement="Result:= cVidSenseFunctionDigitizeCurrent"/>
+          </On>
+          <On Select="TSenseFunction.ACCurrent">
+            <Execute Statement="Result:= cVidSenseFunctionACCurrent"/>
+          </On>
+          <On Select="TSenseFunction.Capacitance">
+            <Execute Statement="Result:= cVidSenseFunctionCapacitance"/>
+          </On>
+          <On Select="TSenseFunction.ACPeriod">
+            <Execute Statement="Result:= cVidSenseFunctionACPeriod"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidSenseFunction)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTKeithleyDMM6500.SenseFunctionApertureVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TSenseFunction"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TSenseFunction.DCVoltage, TSenseFunction.Resistance, TSenseFunction.Temperature, TSenseFunction.DCVoltageRatio, TSenseFunction.FourWireResistance, TSenseFunction.DigitizeVoltage, TSenseFunction.DCCurrent, TSenseFunction.Diode, TSenseFunction.ACFrequency, TSenseFunction.DigitizeCurrent, TSenseFunction.ACPeriod">
+            <Execute Statement="Result:= SenseFunctionVid(Value)"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidSenseFunction)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTKeithleyDMM6500.SenseFunctionNPLCyclesVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TSenseFunction"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TSenseFunction.DCVoltage, TSenseFunction.Resistance, TSenseFunction.Temperature, TSenseFunction.DCVoltageRatio, TSenseFunction.FourWireResistance, TSenseFunction.DCCurrent, TSenseFunction.Diode">
+            <Execute Statement="Result:= SenseFunctionVid(Value)"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidSenseFunction)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTKeithleyDMM6500.SenseFunctionInputImpedenceVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TSenseFunction"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TSenseFunction.DCVoltage, TSenseFunction.DigitizeVoltage">
+            <Execute Statement="Result:= SenseFunctionVid(Value)"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidSenseFunction)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTKeithleyDMM6500.SenseFunctionFromVid" Type="TSenseFunction" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(SenseFunctionVidIndex)">
+          <Execute Statement="SenseFunctionVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TSenseFunction.Low" To="TSenseFunction.High">
+            <inx:Index.MapValue Index="SenseFunctionVidIndex" Key="SenseFunctionVid(I)" Value="I"/>
+          </ForLoop>
+          <Variable Identifier="Found" Type="Boolean"/>
+        </Block>
+        <inx:Index.FindValue Index="SenseFunctionVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidSenseFunction)" Condition="not Found"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTKeithleyDMM6500.DigitizeFunctionVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TDigitizeFunction"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TDigitizeFunction.Voltage">
+            <Execute Statement="Result:= cVidDigitizeFunctionVoltage"/>
+          </On>
+          <On Select="TDigitizeFunction.Current">
+            <Execute Statement="Result:= cVidDigitizeFunctionCurrent"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidDigitizeFunction)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTKeithleyDMM6500.DigitizeFunctionFromVid" Type="TDigitizeFunction" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(DigitizeFunctionVidIndex)">
+          <Execute Statement="DigitizeFunctionVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TDigitizeFunction.Low" To="TDigitizeFunction.High">
+            <inx:Index.MapValue Index="DigitizeFunctionVidIndex" Key="DigitizeFunctionVid(I)" Value="I"/>
+          </ForLoop>
+        </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="DigitizeFunctionVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidDigitizeFunction)" Condition="not Found"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTKeithleyDMM6500.InputImpedanceVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TInputImpedance"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TInputImpedance.MOhm10">
+            <Execute Statement="Result:= cVidInputImpedanceMOhm10"/>
+          </On>
+          <On Select="TInputImpedance.Auto">
+            <Execute Statement="Result:= cVidInputImpedanceAuto"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidInputImpedance)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+    
+    <Function Identifier="TTKeithleyDMM6500.InputImpedanceFromVid" Type="TInputImpedance" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(InputImpedanceVidIndex)">
+          <Execute Statement="InputImpedanceVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TInputImpedance.Low" To="TInputImpedance.High">
+            <inx:Index.MapValue Index="InputImpedanceVidIndex" Key="InputImpedanceVid(I)" Value="I"/>
+          </ForLoop>
+        </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="InputImpedanceVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidInputImpedance)" Condition="not Found"/>
+      </Block>
+    </Function>
+
+    <Constructor Identifier="TKeithleyDMM6500.Create">
+      <Parameters>
+        <Parameter Identifier="VisaResource" Type="TVisaResource"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="inherited Create(VisaResource)"/>
+        <Execute Statement="_StatusStates:= TBitCounter8.Create"/>
+        <Execute Statement="_OperationStates:= TBitCounter16.Create"/>
+        <Execute Statement="_QuestionableStates:= TBitCounter16.Create"/>
+      </Block>
+    </Constructor>
+
+    <Procedure Identifier="TKeithleyDMM6500.Finalize" VirtualMethod="vmFinalize">
+      <Block>
+        <Free Expression="_QuestionableStates"/>
+        <Free Expression="_OperationStates"/>
+        <Free Expression="_StatusStates"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TKeithleyDMM6500.InitiateModel">
+      <Block>
+        <Execute Statement="WriteString(cInitiateModelCommand)"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TKeithleyDMM6500.Wait">
+      <Block>
+        <Execute Statement="WriteString(cWaitCommand)"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TKeithleyDMM6500.AbortModel">
+      <Block>
+        <Execute Statement="WriteString(cAbortModelCommand)"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TKeithleyDMM6500.RefreshReference">
+      <Block>
+        <Execute Statement="WriteString(cRefreshReferenceCommand)"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TKeithleyDMM6500.ClearEventlog">
+      <Block>
+        <Execute Statement="WriteString(cClearEventlogCommand)"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TKeithleyDMM6500.ClearBuffer">
+      <Parameters>
+        <Parameter Identifier="Buffername" Type="ViString"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="WriteString(ViFormat(cClearBufferCommand, Buffername))"/>
+      </Block>
+    </Procedure>
+
+
+
+    <Procedure Identifier="TKeithleyDMM6500.Trigger">
+      <Block>
+        <Execute Statement="WriteString(cTriggerCommand)"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TKeithleyDMM6500.ClearStatusRegisters">
+      <Block>
+        <Execute Statement="WriteString(cClearStatusRegisters)"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TKeithleyDMM6500.MapEventToOperationRegister">
+      <Parameters>
+        <Parameter Identifier="Code" Type="TEventCode"/>
+        <Parameter Identifier="Bit" Type="TOperationRegisterBit"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="WriteString(ViFormat(cEventToOperationCommand, Bit, Code))"/>
+      </Block>
+    </Procedure>
+
+    <Property Identifier="TKeithleyDMM6500.OperationRegisterCascadeMask" Type="TOperationRegisterBits">
+      <Getter>
+        <Execute Statement="Result:= QueryUInt32(cOperationRegisterCascadeMaskQuery)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(ViFormat(cOperationRegisterCascadeMaskCommand, Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TKeithleyDMM6500.ServiceRequestMask" Type="TDmmSTBFlag">
+      <Getter>
+        <Execute Statement="Result:= QueryUInt32(cServiceRequestMaskQuery)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(ViFormat(cServiceRequestMaskCommand, Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TKeithleyDMM6500.SenseFunction" Type="TSenseFunction">
+      <Getter>
+        <Variable Identifier="ResultS" Type="ViString" Init="QueryString(cSenseFunctionQuery)"/>
+        <Choose>
+          <When Expression="ResultS = cVidNone">
+            <Case Expression="DigitizeFunctionFromVid(QueryString(cDigitizeFunctionQuery))">
+              <On Select="TDigitizeFunction.Voltage">
+                <Execute Statement="Result:= TSenseFunction.DigitizeVoltage"/>
+              </On>
+              <On Select="TDigitizeFunction.Current">
+                <Execute Statement="Result:= TSenseFunction.DigitizeCurrent"/>
+              </On>
+            </Case>
+          </When>
+          <Otherwise>
+            <Execute Statement="Result:= SenseFunctionFromVid(ResultS)"/>
+          </Otherwise>
+        </Choose>
+      </Getter>
+      <Setter>
+        <Case Expression="Value">
+          <On Select="TSenseFunction.DigitizeVoltage">
+            <Execute Statement="WriteString(ViFormat(cDigitizeFunctionCommand, DigitizeFunctionVid(TDigitizeFunction.Voltage)))"/>
+          </On>
+          <On Select="TSenseFunction.DigitizeCurrent">
+            <Execute Statement="WriteString(ViFormat(cDigitizeFunctionCommand, DigitizeFunctionVid(TDigitizeFunction.Current)))"/>
+          </On>
+          <Otherwise>
+            <Execute Statement="WriteString(ViFormat(cSenseFunctionCommand, SenseFunctionVid(Value)))"/>
+          </Otherwise>
+        </Case>
+      </Setter>
+    </Property>
+    
+    <Property Identifier="TKeithleyDMM6500.InputImpedance" Type="TInputImpedance">
+      <Parameters>
+        <Parameter Identifier="SenseFunction" Type="TSenseFunction"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= InputImpedanceFromVid(QueryString(SenseFunctionInputImpedenceVid(SenseFunction) + cInputImpedanceQuery))"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(SenseFunctionInputImpedenceVid(SenseFunction) + cInputImpedanceCommand + InputImpedanceVid(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TKeithleyDMM6500.NPLCycles" Type="Extended" >
+      <Parameters>
+        <Parameter Identifier="SenseFunction" Type="TSenseFunction"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryFloat(SenseFunctionNPLCyclesVid(SenseFunction) + cNPLCyclesQuery)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(SenseFunctionNPLCyclesVid(SenseFunction) + cNPLCyclesCommand + FloatToCode(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TKeithleyDMM6500.ConvNPLCycles" Type="ConvInt" >
+      <Parameters>
+        <Parameter Identifier="SenseFunction" Type="TSenseFunction"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryConvInt(SenseFunctionNPLCyclesVid(SenseFunction) + cNPLCyclesQuery, ucPowerLineCycles)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(SenseFunctionNPLCyclesVid(SenseFunction) + cNPLCyclesCommand + ucPowerLineCycles.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TKeithleyDMM6500.Apperture" Type="Extended" >
+      <Parameters>
+        <Parameter Identifier="SenseFunction" Type="TSenseFunction"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryFloat(SenseFunctionApertureVid(SenseFunction) + cApertureQuery)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(SenseFunctionApertureVid(SenseFunction) + cApertureCommand + FloatToCode(Value))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TKeithleyDMM6500.ConvApperture" Type="ConvInt" >
+      <Parameters>
+        <Parameter Identifier="SenseFunction" Type="TSenseFunction"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= QueryConvInt(SenseFunctionApertureVid(SenseFunction) + cApertureQuery, ucAperture)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(SenseFunctionApertureVid(SenseFunction) + cApertureCommand + ucAperture.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TKeithleyDMM6500.OutputFormat" Type="TOutputFormat">
+      <Getter>
+        <Execute Statement="Result:= _DataFormat"/>
+      </Getter>
+      <Setter>
+        <Exit Condition="_DataFormat = Value"/>
+        <Case Expression="Value">
+          <On Select="TOutputFormat.Acii">
+            <Execute Statement="WriteString(cFormatCommand + cVidOutputFormatAcii)"/>
+          </On>
+          <On Select="TOutputFormat.Real">
+            <Execute Statement="WriteString(cFormatCommand + cVidOutputFormatReal)"/>
+          </On>
+        </Case>
+        <Execute Statement="_DataFormat:= Value"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TKeithleyDMM6500.StatusState" Type="TRegisterState">
+      <Parameters>
+        <Parameter Identifier="Bit" Type="TDmmSTB"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="_StatusStates.Update(ReadSTB)"/>
+        <Execute Statement="Result:= _StatusStates[Bit]"/>
+      </Getter>
+    </Property>
+
+    <Function Identifier="TKeithleyDMM6500.StatusChanged" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Bit" Type="TDmmSTB"/>
+        <Parameter Identifier="State" Type="TRegisterState" Direction="InputOutput"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="_StatusStates.Update(ReadSTB)"/>
+        <Variable Identifier="NewState" Type="UInt64" Init="_StatusStates[Bit]"/>
+        <Execute Statement="Result:= NewState &lt;&gt; State"/>
+        <Execute Statement="State:= NewState"/>
+      </Block>
+    </Function>
+
+    <Property Identifier="TKeithleyDMM6500.OperationState" Type="TRegisterState">
+      <Parameters>
+        <Parameter Identifier="Bit" Type="TOperationRegisterBit"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="_OperationStates.Update(QueryUInt32(cStatusOperationQuery))"/>
+        <Execute Statement="Result:= _OperationStates[Bit]"/>
+      </Getter>
+    </Property>
+
+    <Function Identifier="TKeithleyDMM6500.OperationChanged" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Bit" Type="TOperationRegisterBit"/>
+        <Parameter Identifier="State" Type="TRegisterState" Direction="InputOutput"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="_OperationStates.Update(QueryUInt32(cStatusOperationQuery))"/>
+        <Variable Identifier="NewState" Type="UInt64" Init="_OperationStates[Bit]"/>
+        <Execute Statement="Result:= NewState &lt;&gt; State"/>
+        <Execute Statement="State:= NewState"/>
+      </Block>
+    </Function>
+
+    <Constructor Identifier="TBaseMeasurementQuery.Create">
+      <Parameters>
+        <Parameter Identifier="DMM" Type="TKeithleyDMM6500"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Self._DMM:= DMM"/>
+        <Execute Statement="Self._VisaResource:= DMM.VisaResource"/>
+      </Block>
+    </Constructor>
+
+    <Procedure Identifier="TBaseMeasurementQuery.Activate" VirtualMethod="vmActivate">
+      <Block>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TBaseMeasurementQuery.RaiseNotActiveError">
+      <Block>
+        <Raise Expression="Exception.Create(sErrorMeasurementQueryNotActive)"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TBaseMeasurementQuery.RaiseInvalidMeasurementField">
+      <Block>
+        <Raise Expression="Exception.Create(sErrorReadingInvalidMeasurementField)"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TBaseMeasurementQuery.Deactivate">
+      <Block>
+        <Execute Statement="_Active:= False"/>
+      </Block>
+    </Procedure>
+
+    <Property Identifier="TAsciiMeasurementQuery.BufferName" Type="ViString">
+      <Getter>
+
+      </Getter>
+      <Setter>
+
+      </Setter>
+    </Property>
+
+    <Procedure Identifier="TRealMeasurementQuery.Activate" VirtualMethod="vmActivate">
+      <Block>
+        <Execute Statement="_DMM.OutputFormat:= TOutputFormat.Real"/>
+        <Execute Statement="_Active:= True"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TRealMeasurementQuery.InvalidatePrepare">
+      <Block>
+        <Execute Statement="_Prepared:= False"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TRealMeasurementQuery.Prepare">
+      <Block>
+        <Variable Identifier="LocBufferName" Type="ViString" Init="_BufferName"/>
+        <Execute Statement="LocBufferName:= cDefaultBuffer" Condition="IsEmptyString(LocBufferName)"/>
+        <Variable Identifier="LocParameters" Type="ViString" Init="' &quot;' + LocBufferName + '&quot;'"/>
+        <Execute Statement="LocParameters:= LocParameters + (viComma + cVidElementRelativeTime)" Condition="_RequestRelativeTime"/>
+        <Execute Statement="LocParameters:= LocParameters + (viComma + cVidElementValue)" Condition="_RequestValue"/>
+        <Execute Statement="LocParameters:= LocParameters + (viComma + cVidElementExtraValue)" Condition="_RequestExtraValue"/>
+        <Execute Statement="_Parameters:= LocParameters"/>
+        <Execute Statement="_Prepared:= True"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TRealMeasurementQuery.HandleSingleResult">
+      <Block>
+        <Variable Identifier="LocUInt16" Type="UInt32"/>
+        <Variable Identifier="LocRelativeTime" Type="Double"/>
+        <Variable Identifier="LocValue" Type="Double"/>
+        <Variable Identifier="LocExtraValue" Type="Double"/>
+        <Variable Identifier="LocIsValidRelativeTime" Type="Boolean" Init="False"/>
+        <Variable Identifier="LocIsValidValue" Type="Boolean" Init="False"/>
+        <Variable Identifier="LocIsValidExtraValue" Type="Boolean" Init="False"/>
+        <Object.Use Identifier="Data" Type="TMemoryStream" Expression="_DMM.ReadBlob(32)">
+          <Raise Condition="Data.ReadDataUInt16(LocUInt16) &lt;&gt; cSizeUInt16" Expression="Exception.Create(sErrorReadingMeasurementData)"/>
+          <Raise Condition="LocUInt16 &lt;&gt; $3023" Expression="Exception.Create(Format('no #0: %x', LocUInt16))"/>
+          <Block Condition="_RequestRelativeTime">
+            <Raise Condition="Data.ReadDataDouble(LocRelativeTime) &lt;&gt; cSizeDouble" Expression="Exception.Create(sErrorReadingMeasurementData)"/>
+            <Execute Statement="_RelativeTime:= LocRelativeTime"/>
+            <Execute Statement="LocIsValidRelativeTime:= True"/>
+          </Block>
+          <Block Condition="_RequestValue">
+            <Raise Condition="Data.ReadDataDouble(LocValue) &lt;&gt; cSizeDouble" Expression="Exception.Create(sErrorReadingMeasurementData)"/>
+            <Execute Statement="_Value:= LocValue"/>
+            <Execute Statement="LocIsValidValue:= True"/>
+          </Block>
+          <Block Condition="_RequestExtraValue">
+            <Raise Condition="Data.ReadDataDouble(LocExtraValue) &lt;&gt; cSizeDouble" Expression="Exception.Create(sErrorReadingMeasurementData)"/>
+            <Execute Statement="_ExtraValue:= LocExtraValue"/>
+            <Execute Statement="LocIsValidExtraValue:= True"/>
+          </Block>
+          <Execute Statement="_IsValidRelativeTime:= LocIsValidRelativeTime"/>
+          <Execute Statement="_IsValidValue:= LocIsValidValue"/>
+          <Execute Statement="_IsValidExtraValue:= LocIsValidExtraValue"/>
+        </Object.Use>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TRealMeasurementQuery.Fetch">
+      <Block>
+        <Execute Statement="RaiseNotActiveError" Condition="not _Active"/>
+        <Execute Statement="Prepare" Condition="not _Prepared"/>
+        <Execute Statement="_DMM.WriteString(cFetchQuery + _Parameters)"/>
+        <Execute Statement="HandleSingleResult"/>
+      </Block>
+    </Procedure>
+
+    <Property Identifier="TRealMeasurementQuery.RequestValue" Type="Boolean">
+      <Getter>
+        <Execute Statement="Result:= _RequestValue"/>
+      </Getter>
+      <Setter>
+        <Exit Condition="Value = _RequestValue"/>
+        <Execute Statement="_RequestValue:= Value"/>
+        <Execute Statement="InvalidatePrepare" Condition="_Prepared"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TRealMeasurementQuery.Prepared" Type="Boolean">
+      <Getter>
+        <Execute Statement="Result:= _Prepared"/>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TRealMeasurementQuery.RequestRelativeTime" Type="Boolean">
+      <Getter>
+        <Execute Statement="Result:= _RequestRelativeTime"/>
+      </Getter>
+      <Setter>
+        <Exit Condition="Value = _RequestRelativeTime"/>
+        <Execute Statement="_RequestRelativeTime:= Value"/>
+        <Execute Statement="InvalidatePrepare" Condition="_Prepared"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TRealMeasurementQuery.RequestExtraValue" Type="Boolean">
+      <Getter>
+        <Execute Statement="Result:= _RequestRelativeTime"/>
+      </Getter>
+      <Setter>
+        <Exit Condition="Value = _RequestExtraValue"/>
+        <Execute Statement="_RequestExtraValue:= Value"/>
+        <Execute Statement="InvalidatePrepare" Condition="_Prepared"/>
+      </Setter>
+    </Property>
+
+    <Property Identifier="TRealMeasurementQuery.RelativeTime" Type="Double">
+      <Getter>
+        <Execute Statement="RaiseInvalidMeasurementField" Condition="not _IsValidRelativeTime"/>
+        <Execute Statement="Result:= _RelativeTime"/>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TRealMeasurementQuery.Value" Type="Double">
+      <Getter>
+        <Execute Statement="RaiseInvalidMeasurementField" Condition="not _IsValidValue"/>
+        <Execute Statement="Result:= _Value"/>
+      </Getter>
+    </Property>
+
+    <Property Identifier="TRealMeasurementQuery.ExtraValue" Type="Double">
+      <Getter>
+        <Execute Statement="RaiseInvalidMeasurementField" Condition="not _IsValidExtraValue"/>
+        <Execute Statement="Result:= _IsValidExtraValue"/>
+      </Getter>
+    </Property>
+
+    <Procedure Identifier="TAsciiMeasurementQuery.Activate" VirtualMethod="vmActivate">
+      <Block>
+        <Execute Statement="_DMM.OutputFormat:= TOutputFormat.Acii"/>
+        <Execute Statement="_Active:= True"/>
+      </Block>
+    </Procedure>
+    
+    <Property Identifier="TKeithleyDMM6500.ActiveQuery" Type="TBaseMeasurementQuery">
+      <Getter>
+        <Execute Statement="Result:= _ActiveQuery"/>
+      </Getter>
+      <Setter>
+        <Variable Identifier="LocActiveQuery" Type="TBaseMeasurementQuery" Init="_ActiveQuery"/>
+        <Exit Condition="LocActiveQuery = Value"/>
+        <Execute Statement="LocActiveQuery.Deactivate" Condition="Assigned(LocActiveQuery)"/>
+        <Execute Statement="_ActiveQuery:= Value"/>
+        <Execute Statement="Value.Activate" Condition="Assigned(Value)"/>
+      </Setter>
+    </Property>
+
+    <Procedure Identifier="TBaseTMA.Init" VirtualMethod="vmInit">
+      <Parameters>
+        <Parameter Identifier="BlockSequence" Type="UInt32" Direction="InputOutput"/>
+      </Parameters>
+      <Block>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TBaseTMA.Execute" VirtualMethod="vmExecute">
+      <Parameters>
+        <Parameter Identifier="Dmm" Type="TKeithleyDMM6500"/>
+      </Parameters>
+      <Block>
+      </Block>
+    </Procedure>
+    
+    <Procedure Identifier="TBaseBlockTMA.Init" VirtualMethod="vmInit">
+      <Parameters>
+        <Parameter Identifier="BlockSequence" Type="UInt32" Direction="InputOutput"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="_BlockSequence:= BlockSequence"/>
+        <Execute Statement="BlockSequence:= BlockSequence + 1"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TNotifyTMA.Execute" VirtualMethod="vmExecute">
+      <Parameters>
+        <Parameter Identifier="Dmm" Type="TKeithleyDMM6500"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Dmm.WriteString(ViFormat(':TRIGger:BLOCk:NOTify %d, %d', _BlockSequence, NotifyID))"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TDigitizeTMA.Execute" VirtualMethod="vmExecute">
+      <Parameters>
+        <Parameter Identifier="Dmm" Type="TKeithleyDMM6500"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Dmm.WriteString(ViFormat(':TRIGger:BLOCk:MDIGitize %d', _BlockSequence))"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TExternalTriggerPulseTMA.Execute" VirtualMethod="vmExecute">
+      <Parameters>
+        <Parameter Identifier="Dmm" Type="TKeithleyDMM6500"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="PulseVid" Type="ViString"/>
+        <Case Expression="TriggerPulse">
+          <On Select="TTriggerPulse.Low">
+            <Execute Statement="PulseVid:= 'NEGative'"/>
+          </On>
+          <On Select="TTriggerPulse.High">
+            <Execute Statement="PulseVid:= 'POSitive'"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create('Invalid trigger pulse')"/>
+          </Otherwise>
+        </Case>
+        <Execute Statement="Dmm.WriteString(ViFormat(':TRIGger:EXTernal:OUT:LOGic %s', PulseVid))"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TExternalTriggerNotificationStimulusTMA.Execute" VirtualMethod="vmExecute">
+      <Parameters>
+        <Parameter Identifier="Dmm" Type="TKeithleyDMM6500"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Dmm.WriteString(ViFormat(':TRIGger:EXTernal:OUT:STIMulus NOTify%d', NotifyID))"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TTriggerModel.Finalize" VirtualMethod="vmFinalize">
+      <Block>
+        <lil:LinkedList.Iterate Head="Head" ItemType="TBaseTMA" RunningItem="Item" Next="Item.Next">
+          <Free Expression="Item"/>
+        </lil:LinkedList.Iterate>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TTriggerModel._AddAction">
+      <Parameters>
+        <Parameter Identifier="Item" Type="TBaseTMA"/>
+      </Parameters>
+      <Block>
+        <Choose>
+          <When Expression="Assigned(Head)">
+            <Execute Statement="Tail.Next:= Item"/>
+          </When>
+          <Otherwise>
+            <Execute Statement="Head:= Item"/>
+          </Otherwise>
+        </Choose>
+        <Execute Statement="Tail:= Item"/>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="TTriggerModel.NewNotifyAction" Type="TNotifyTMA">
+      <Parameters>
+        <Parameter Identifier="NotifyID" Type="UInt32"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= TNotifyTMA.Create"/>
+        <Execute Statement="Result.NotifyID:= NotifyID"/>
+        <Execute Statement="_AddAction(Result)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTriggerModel.NewExternalTriggerNotificationStimulusAction" Type="TExternalTriggerNotificationStimulusTMA">
+      <Parameters>
+        <Parameter Identifier="NotifyID" Type="UInt32"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= TExternalTriggerNotificationStimulusTMA.Create"/>
+        <Execute Statement="Result.NotifyID:= NotifyID"/>
+        <Execute Statement="_AddAction(Result)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTriggerModel.NewDigitizeAction" Type="TDigitizeTMA">
+      <Block>
+        <Execute Statement="Result:= TDigitizeTMA.Create"/>
+        <Execute Statement="_AddAction(Result)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTriggerModel.NewExternalTriggerPulseAction" Type="TExternalTriggerPulseTMA">
+      <Parameters>
+        <Parameter Identifier="TriggerPulse" Type="TTriggerPulse"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= TExternalTriggerPulseTMA.Create"/>
+        <Execute Statement="Result.TriggerPulse:= TriggerPulse"/>
+        <Execute Statement="_AddAction(Result)"/>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TKeithleyDMM6500.SetTriggerModel">
+      <Parameters>
+        <Parameter Identifier="ActionList" Type="TTriggerModel"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="BlockSequence" Type="UInt32" Init="1"/>
+        <lil:LinkedList.Iterate Head="ActionList.Head" ItemType="TBaseTMA" RunningItem="Item" Next="Item.Next">
+          <Execute Statement="Item.Init(BlockSequence)"/>
+        </lil:LinkedList.Iterate>
+        <Execute Statement="WriteString(':TRIGger:LOAD &quot;EMPTY&quot;')"/>
+        <lil:LinkedList.Iterate Head="ActionList.Head" ItemType="TBaseTMA" RunningItem="Item" Next="Item.Next">
+          <Execute Statement="Item.Execute(Self)"/>
+        </lil:LinkedList.Iterate>
+      </Block>
+    </Procedure>
+
+  </Procedures>
+
+  <Finalization>
+    <Free Identifier="SenseFunctionVidIndex"/>
+    <Free Identifier="DigitizeFunctionVidIndex"/>
+    <Free Identifier="InputImpedanceVidIndex"/>
+  </Finalization>
+</pkg:Library>

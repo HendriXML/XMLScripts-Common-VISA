@@ -17,26 +17,17 @@
   xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
   xmlns:stm="urn:schemas-www-wisware.nl-xmlscripting-statemanagement">
   <Uses>
+    <Use Identifier="ElectronicUtils"/>
     <Use Identifier="VISAInstrument"/>
   </Uses>
 
   <Type>
-    <Enumeration Identifier="TSiglentSDG1000XBasicWaveKind" Elements="Ch1, Ch2" LowAlias="Low" HighAlias="High"/>
     <Enumeration Identifier="TSDGChannel" Elements="CH1, CH2" LowAlias="Low" HighAlias="High"/>
 
     <DataClass Identifier="TSiglentSDG1000XIniHelper" Inherit="TIniHelper" DefaultConstructor="none">
     </DataClass>
 
-    <DataClass Identifier="TSiglentSDG1000XBasicWave" Inherit="TVisaAtrributeGroup">
-      <VirtualMethod Identifier="vmSetAttributeStates" Override="true"/>
-      <Field Identifier="ChannelKind" Type="TSiglentSDG1000XBasicWaveKind"/>
-      <Field Identifier="_FrequencyState" Type="TVisaAttributeState"/>
-      <Field Identifier="_Frequency" Type="Extended"/>
-    </DataClass>
-
     <DataClass Identifier="TSiglentSDG1000X" Inherit="TVISAInstrument" ClassOfIdentifier="TTSiglentSDG1000X">
-      <Field Identifier="BasicWave1" Type="TSiglentSDG1000XBasicWave"/>
-      <Field Identifier="BasicWave2" Type="TSiglentSDG1000XBasicWave"/>
     </DataClass>
 
   </Type>
@@ -59,6 +50,7 @@
   </Constants>
   
   <Variables>
+    <Variable Identifier="ucDC" Type="TUnitConvertor" Init="TUnitConvertor.Create(TGranularity.Femto, TSiUnit.Volt)"/>
     <Variable Identifier="SDGChannelVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
     <Variable Identifier="SDGChannelNameIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
   </Variables>
@@ -136,61 +128,12 @@
       </Block>
     </Function>
 
-    <Constructor Identifier="TSiglentSDG1000XBasicWave.Create">
-      <Parameters>
-        <Parameter Identifier="Instrument" Type="TVisaInstrument"/>
-        <Parameter Identifier="ChannelKind" Type="TSiglentSDG1000XBasicWaveKind"/>
-      </Parameters>
-      <Block>
-        <Execute Statement="inherited Create(Instrument)"/>
-        <Execute Statement="Self.ChannelKind:= ChannelKind"/>
-      </Block>
-    </Constructor>
-
-    <Procedure Identifier="TSiglentSDG1000XBasicWave.SetAttributeStates" VirtualMethod="vmSetAttributeStates">
-      <Parameters>
-        <Parameter Identifier="State" Type="TVisaAttributeState"/>
-      </Parameters>
-      <Block>
-        <Execute Statement="_FrequencyState:= State"/>
-      </Block>
-    </Procedure>
-
-    <Property Identifier="TSiglentSDG1000XBasicWave.Frequency" Type="Extended">
-      <Getter>
-        <Execute Statement="Instrument.BeginRead(Self)"/>
-        <TryFinally>
-          <Try>
-            <Execute Statement="RaiseAttributeError('Frequency')" Condition="_FrequencyState &lt;&gt; TVisaAttributeState.ValidValue"/>
-            <Execute Statement="Result:= _Frequency"/>
-          </Try>
-          <Finally>
-            <Execute Statement="Instrument.EndRead(Self)"/>
-          </Finally>
-        </TryFinally>
-      </Getter>
-      <Setter>
-        <Execute Statement="Instrument.BeginWrite(Self)"/>
-        <TryFinally>
-          <Try>
-            <Execute Statement="_FrequencyState:= TVisaAttributeState.PendingChange"/>
-            <Execute Statement="_Frequency:= Value"/>
-          </Try>
-          <Finally>
-            <Execute Statement="Instrument.EndWrite(Self)"/>
-          </Finally>
-        </TryFinally>
-      </Setter>
-    </Property>
-
     <Constructor Identifier="TSiglentSDG1000X.Create">
       <Parameters>
         <Parameter Identifier="VisaResource" Type="TVisaResource"/>
       </Parameters>
       <Block>
         <Execute Statement="inherited Create(VisaResource)" />
-        <Execute Statement="BasicWave1:= TSiglentSDG1000XBasicWave.Create(Self, TSiglentSDG1000XBasicWaveKind.Ch1)"/>
-        <Execute Statement="BasicWave2:= TSiglentSDG1000XBasicWave.Create(Self, TSiglentSDG1000XBasicWaveKind.Ch2)"/>
       </Block>
     </Constructor>
 
@@ -216,6 +159,16 @@
       </Block>
     </Procedure>
 
+    <Procedure Identifier="TSiglentSDG1000X.SetConvDC">
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TSDGChannel"/>
+        <Parameter Identifier="Value" Type="ConvInt"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="WriteString(ChannelVid(Channel) + cDCCommand + ucDC.IntValueToEngineeringStr(Value, TUnitPostFix.None, viDecimalSeperatior))"/>
+      </Block>
+    </Procedure>
+
     <Procedure Identifier="TSiglentSDG1000X.SetSine">
       <Parameters>
         <Parameter Identifier="Channel" Type="TSDGChannel"/>
@@ -238,6 +191,16 @@
         <Variable Identifier="ResultS" Type="string" Init="Inifile.ReadString(CurrentSection, Key, DefaultString)"/>
         <Execute Statement="Result:= TSiglentSDG1000X.ChannelFromName(ResultS)"/>
         <rep:Reporter.Information Text="Format('%s=%s', Key, TSiglentSDG1000X.ChannelName(Result))" Condition="EnableEcho"/>
+      </Block>
+    </Function>
+    
+    <Function Identifier="TSiglentSDG1000XIniHelper.ConvReadDC" Type="ConvInt">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="string"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= ReadConvInt(Key, ucDC, Default)"/>
       </Block>
     </Function>
   </Procedures>

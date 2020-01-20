@@ -22,6 +22,10 @@
   </Uses>
 
   <Type>
+    <Enumeration Identifier="TDsoSTB" Elements="INB, ESB = 5"/>
+
+    <Enumeration Identifier="TDsoSTBFlag" Elements="INB = 1 shl TDsoSTB.INB, ESB = 1 shl TDsoSTB.ESB"/>
+
     <Enumeration Identifier="TImageType" Elements="BMP, PNG"/>
 
     <Enumeration Identifier="THeaderType" Elements="Off, Short, Long" LowAlias="Low" HighAlias="High"/>
@@ -38,6 +42,8 @@
 
     <Enumeration Identifier="TAcquireWay" Elements="Normal, PeakDetect, Average, HighRes" LowAlias="Low" HighAlias="High"/>
 
+    <Enumeration Identifier="TCoupling" Elements="AC, ACLowZ, DC, DCLowZ, GND" LowAlias="Low" HighAlias="High"/>
+
     <Enumeration Identifier="TStatusBit" Elements="SignalAcquired, TriggerIsReady = 13"/>
 
     <Enumeration Identifier="TWaveFormFormat" Elements="Dat2, All"/>
@@ -46,7 +52,8 @@
       <VirtualMethod Identifier="vmFinalize" IsFinalizer="true"/>
       <VirtualMethod Identifier="vmSupportsTrace"/>
       <VirtualMethod Identifier="vmGetTDivNodes"/>
-      <Field Identifier="_StatusStates" Type="TBitCounter16"/>
+      <Field Identifier="_InternalStatusStates" Type="TBitCounter16"/>
+      <Field Identifier="_StatusStates" Type="TBitCounter8"/>
     </DataClass>
 
     <DataClass Identifier="TSiglentTDivNode">
@@ -99,6 +106,9 @@
     <DataClass Identifier="TMultiFrameAcquisitionOptions" Inherit="TAcquisitionOptions">
     </DataClass>
 
+    <DataClass Identifier="TSamplesAcquisitionOptions" Inherit="TAcquisitionOptions">
+    </DataClass>
+
     <DataClass Identifier="TSingleSummedSampleAcquisitionOptions" Inherit="TAcquisitionOptions">
     </DataClass>
   </Type>
@@ -136,6 +146,7 @@
     <Constant Identifier="sErrorCouldNotDetermineScope" Type="string" Expression="'Could not determine the scope model'"/>
     <Constant Identifier="sErrorUnknownScope" Type="string" Expression="'Unknown scope model: '"/>
     <Constant Identifier="sErrorInvalidCycles" Type="string" Expression="'Invalid cycles'"/>
+    <Constant Identifier="sErrorInvalidCoupling" Type="string" Expression="'Invalid Coupling'"/>
 
     <Constant Identifier="c0" Type="AnsiChar" Expression="'0'"/>
     <Constant Identifier="cVDivisions" Type="UInt32" Expression="8"/>
@@ -163,7 +174,7 @@
     <Constant Identifier="coHorizontalUncertaintyOffset" Type="UInt32" Expression="292"/>
     <Constant Identifier="coTriggerTimeOffset" Type="UInt32" Expression="296"/>
     <Constant Identifier="coProbeAttenuationOffset" Type="UInt32" Expression="328"/>
-    <Constant Identifier="cWaveCaptureTimeout" Type="UInt32" Expression="100000"/>
+    <Constant Identifier="cWaveCaptureTimeout" Type="UInt32" Expression="1000000"/>
     <Constant Identifier="cWaveBlobSize" Type="UInt32" Expression="29360640"/>
     <Constant Identifier="cScreenCapureBlobSize" Type="UInt32" Expression="1000000"/>
 
@@ -216,6 +227,12 @@
     <Constant Identifier="cNameAcquireWayPeakDetect" Type="string" Expression="'PeakDetect'"/>
     <Constant Identifier="cNameAcquireWayAverage" Type="string" Expression="'Average'"/>
     <Constant Identifier="cNameAcquireWayHighRes" Type="string" Expression="'HighRes'"/>
+
+    <Constant Identifier="cNameCouplingACHighZ" Type="string" Expression="'ACHighZ'"/>
+    <Constant Identifier="cNameCouplingACLowZ" Type="string" Expression="'ACLowZ'"/>
+    <Constant Identifier="cNameCouplingDCHighZ" Type="string" Expression="'DCHighZ'"/>
+    <Constant Identifier="cNameCouplingDCLowZ" Type="string" Expression="'DCLowZ'"/>
+    <Constant Identifier="cNameCouplingGND" Type="string" Expression="'GND'"/>
 
     <Constant Identifier="cVidChannelTypeCH1" Type="ViString" Expression="'C1'"/>
     <Constant Identifier="cVidChannelTypeCH2" Type="ViString" Expression="'C2'"/>
@@ -270,6 +287,12 @@
     <Constant Identifier="cVidHeaderTypeShort" Type="ViString" Expression="'SHORT'"/>
     <Constant Identifier="cVidHeaderTypeLong" Type="ViString" Expression="'LONG'"/>
 
+    <Constant Identifier="cVidCouplingACHighZ" Type="string" Expression="'A1M'"/>
+    <Constant Identifier="cVidCouplingACLowZ" Type="string" Expression="'A50'"/>
+    <Constant Identifier="cVidCouplingDCHighZ" Type="string" Expression="'D1M'"/>
+    <Constant Identifier="cVidCouplingDCLowZ" Type="string" Expression="'D50'"/>
+    <Constant Identifier="cVidCouplingGND" Type="string" Expression="'GND'"/>
+
     <Constant Identifier="viSpace" Type="ViString" Expression="' '"/>
     <Constant Identifier="viParamSep" Type="ViString" Expression="','"/>
 
@@ -300,8 +323,6 @@
     <Constant Identifier="cTRIG_PATTERNQuery" Type="ViString" Expression="'TRIG_PATTERN?'"/>
     <Constant Identifier="cTRIG_PATTERNCommand" Type="ViString" Expression="'TRIG_PATTERN '"/>
     <Constant Identifier="cSTOPCommand" Type="ViString" Expression="'STOP'"/>
-    <Constant Identifier="cWAITCommand" Type="ViString" Expression="'WAIT'"/>
-    <Constant Identifier="cWAITCommandSpace" Type="ViString" Expression="'WAIT '"/>
     <Constant Identifier="cARMCommand" Type="ViString" Expression="'ARM'"/>
     <Constant Identifier="cINRQuery" Type="ViString" Expression="'INR?'"/>
     <Constant Identifier="cACQUIRE_WAYAverageCommand" Type="ViString" Expression="'ACQUIRE_WAY AVERAGE,'"/>
@@ -311,7 +332,7 @@
     <Constant Identifier="cTRACEQuery" Type="ViString" Expression="':TRACE?'"/>
     <Constant Identifier="cTRACECommand" Type="ViString" Expression="':TRACE '"/>
     <Constant Identifier="cHISTORY_MODEQuery" Type="ViString" Expression="'HISTORY_MODE?'"/>
-    <Constant Identifier="cHISTORY_MODECommand" Type="ViString" Expression="'HISTORY_MODE'"/>
+    <Constant Identifier="cHISTORY_MODECommand" Type="ViString" Expression="'HISTORY_MODE '"/>
     <Constant Identifier="cMEMORY_SIZEQuery" Type="ViString" Expression="'MEMORY_SIZE?'"/>
     <Constant Identifier="cMEMORY_SIZECommand" Type="ViString" Expression="'MEMORY_SIZE '"/>
     <Constant Identifier="cWAVEFORM_SETUPTYPE1Command" Type="ViString" Expression="'WAVEFORM_SETUP TYPE,1'"/>
@@ -320,7 +341,12 @@
     <Constant Identifier="cBANDWIDTH_LIMITCommand" Type="ViString" Expression="'BANDWIDTH_LIMIT '"/>
     <Constant Identifier="cCHDRQuery" Type="ViString" Expression="'CHDR?'"/>
     <Constant Identifier="cCHDRCommand" Type="ViString" Expression="'CHDR '"/>
+    <Constant Identifier="cCOUPLINGQuery" Type="ViString" Expression="':COUPLING?'"/>
+    <Constant Identifier="cCOUPLINGCommand" Type="ViString" Expression="':COUPLING '"/>
     <Constant Identifier="cWAVEFORMQuery" Type="ViString" Expression="':WAVEFORM? '"/>
+    <Constant Identifier="cWaitCommand" Type="ViString" Expression="'WAIT'"/>
+    <Constant Identifier="cWaitTimeoutCommand" Type="ViString" Expression="'WAIT '"/>
+    <Constant Identifier="cWVDTQuery" Type="ViString" Expression="'WVDT? '"/>
     <Constant Identifier="cWAVEFORM_DAT2" Type="ViString" Expression="'DAT2'"/>
     <Constant Identifier="cWAVEFORM_ALL" Type="ViString" Expression="'ALL'"/>
   </Constants>
@@ -328,7 +354,6 @@
   <Variables>
     <Variable Identifier="ucTDiv" Type="TUnitConvertor" Init="TUnitConvertor.Create(TGranularity.Pico, TSiUnit.Second)"/>
     <Variable Identifier="ucTriggerDelay" Type="TUnitConvertor" Init="ucTDiv"/>
-    <Variable Identifier="ucCycleFrequency" Type="TUnitConvertor" Init="TUnitConvertor.Create(TGranularity.Milli, TSiUnit.Hz)"/>
 
     <Variable Identifier="ucVDiv" Type="TUnitConvertor" Init="TUnitConvertor.Create(TGranularity.Pico, TSiUnit.Volt)"/>
     <Variable Identifier="ucMathVDiv" Type="TUnitConvertor" Init="ucVDiv"/>
@@ -344,6 +369,7 @@
     <Variable Identifier="MemSizeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
     <Variable Identifier="AvgTimeNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
     <Variable Identifier="AcquireWayNameIndex" Type="TMappingCaseInSensitiveUnicodeStringToInt64"/>
+    <Variable Identifier="CouplingNameIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
 
     <Variable Identifier="AcquireWayVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
     <Variable Identifier="AvgTimeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
@@ -352,6 +378,7 @@
     <Variable Identifier="MemSizeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
     <Variable Identifier="TraceTypeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
     <Variable Identifier="TriggerModeVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
+    <Variable Identifier="CouplingVidIndex" Type="TMappingCaseInSensitiveViStringToInt64"/>
     <Variable Identifier="SiglentScopeTDivHead" Type="TSiglentTDivNode"/>
     <Variable Identifier="SiglentScopeTDivTail" Type="TSiglentTDivNode"/>
     <Variable Identifier="SiglentScopeTDivRoot" Type="TSiglentTDivNode"/>
@@ -543,12 +570,12 @@
     <Function Identifier="TTSiglentScope.ConvGetCyclesTDiv" Type="ConvInt">
       <Parameters>
         <Parameter Identifier="Frequency" Type="ConvInt"/>
-        <Parameter Identifier="Cycles" Type="UInt32"/>
+        <Parameter Identifier="Cycles" Type="ConvInt"/>
       </Parameters>
       <Block>
-        <!--<Variable Identifier="Value" Type="ConvInt" Init="(facToPico * Cycles) div (Frequency * DivisionsPerScreen div facToPico)"/>-->
+        <!--<Variable Identifier="Value" Type="ConvInt" Init="(facToPico * (Cycles div facToNano)) div ((Frequency div facToMilli) * DivisionsPerScreen)"/>-->
         <Variable Identifier="Divider" Type="Int64" Init="(Frequency * DivisionsPerScreen)"/>
-        <Variable Identifier="Value" Type="ConvInt" Init="(facToPico * facToMilli * Cycles + Divider - 1) div Divider"/>
+        <Variable Identifier="Value" Type="ConvInt" Init="(facMicroToPico * Cycles + Divider - 1) div Divider"/>
         <Variable Identifier="LowNode" Type="TSiglentTDivNode"/>
         <Variable Identifier="HighNode" Type="TSiglentTDivNode"/>
         <rep:Reporter.Information Text="Format('Time: %s', ucTDiv.IntValueToStr(Value, TUnitPostFix.Separated, ','))" Condition="IsDebugging"/>
@@ -905,6 +932,34 @@ end;
       </Block>
     </Function>
 
+    <Function Identifier="TTSiglentScope.CouplingName" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TCoupling"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TCoupling.AC">
+            <Execute Statement="Result:= cNameCouplingACHighZ"/>
+          </On>
+          <On Select="TCoupling.ACLowZ">
+            <Execute Statement="Result:= cNameCouplingACLowZ"/>
+          </On>
+          <On Select="TCoupling.DC">
+            <Execute Statement="Result:= cNameCouplingDCHighZ"/>
+          </On>
+          <On Select="TCoupling.DCLowZ">
+            <Execute Statement="Result:= cNameCouplingDCLowZ"/>
+          </On>
+          <On Select="TCoupling.GND">
+            <Execute Statement="Result:= cNameCouplingGND"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidCoupling)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
     <Function Identifier="TTSiglentScope.TraceTypeFromName" Type="TTraceType" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Name" Type="string"/>
@@ -1018,6 +1073,23 @@ end;
         <Variable Identifier="Found" Type="Boolean"/>
         <inx:Index.FindValue Index="AcquireWayNameIndex" Key="Name" Value="Result" Found="Found" Flags="NoErrorOnNotFound" />
         <Raise Expression="Exception.Create(sErrorInvalidAcquireWay)" Condition="not Found"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TTSiglentScope.CouplingFromName" Type="TCoupling" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(CouplingNameIndex)">
+          <Execute Statement="CouplingNameIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TCoupling.Low" To="TCoupling.High">
+            <inx:Index.MapValue Index="CouplingNameIndex" Key="CouplingName(I)" Value="I"/>
+          </ForLoop>
+        </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="CouplingNameIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidCoupling)" Condition="not Found"/>
       </Block>
     </Function>
 
@@ -1284,6 +1356,34 @@ end;
       </Block>
     </Function>
 
+    <Function Identifier="TTSiglentScope.CouplingVid" Type="ViString" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="TCoupling"/>
+      </Parameters>
+      <Block>
+        <Case Expression="Value" Optimalisation="integermapping">
+          <On Select="TCoupling.AC">
+            <Execute Statement="Result:= cVidCouplingACHighZ"/>
+          </On>
+          <On Select="TCoupling.ACLowZ">
+            <Execute Statement="Result:= cVidCouplingACLowZ"/>
+          </On>
+          <On Select="TCoupling.DC">
+            <Execute Statement="Result:= cVidCouplingDCHighZ"/>
+          </On>
+          <On Select="TCoupling.DCLowZ">
+            <Execute Statement="Result:= cVidCouplingDCLowZ"/>
+          </On>
+          <On Select="TCoupling.GND">
+            <Execute Statement="Result:= cVidCouplingGND"/>
+          </On>
+          <Otherwise>
+            <Raise Expression="Exception.Create(sErrorInvalidCoupling)"/>
+          </Otherwise>
+        </Case>
+      </Block>
+    </Function>
+
     <Function Identifier="TTSiglentScope.AcquireWayFromVid" Type="TAcquireWay" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Value" Type="string"/>
@@ -1417,17 +1517,36 @@ end;
       </Block>
     </Function>
 
+    <Function Identifier="TTSiglentScope.CouplingFromVid" Type="TCoupling" IsDeterministic="true">
+      <Parameters>
+        <Parameter Identifier="Value" Type="string"/>
+      </Parameters>
+      <Block>
+        <Block Condition="IsEmpty(CouplingVidIndex)">
+          <Execute Statement="CouplingVidIndex:= TMappingCaseInSensitiveViStringToInt64.Create"/>
+          <ForLoop Indexer="I" From="TCoupling.Low" To="TCoupling.High">
+            <inx:Index.MapValue Index="CouplingVidIndex" Key="CouplingVid(I)" Value="I"/>
+          </ForLoop>
+        </Block>
+        <Variable Identifier="Found" Type="Boolean"/>
+        <inx:Index.FindValue Index="CouplingVidIndex" Key="Value" Value="Result" Found="Found" Flags="NoErrorOnNotFound"/>
+        <Raise Expression="Exception.Create(sErrorInvalidCoupling)" Condition="not Found"/>
+      </Block>
+    </Function>
+
     <Constructor Identifier="TSiglentScope.Create">
       <Parameters>
         <Parameter Identifier="VisaResource" Type="TVisaResource"/>
       </Parameters>
       <Block>
         <Execute Statement="inherited Create(VisaResource)"/>
-        <Execute Statement="_StatusStates:= TBitCounter16.Create"/>
+        <Execute Statement="_StatusStates:= TBitCounter8.Create"/>
+        <Execute Statement="_InternalStatusStates:= TBitCounter16.Create"/>
       </Block>
     </Constructor>
     <Procedure Identifier="TSiglentScope.Finalize" VirtualMethod="vmFinalize">
       <Block>
+        <Free Expression="_InternalStatusStates"/>
         <Free Expression="_StatusStates"/>
       </Block>
     </Procedure>
@@ -1464,6 +1583,18 @@ end;
       </Setter>
     </Property>
 
+    <Property Identifier="TSiglentScope.Coupling" Type="TCoupling" >
+      <Parameters>
+        <Parameter Identifier="Channel" Type="TChannelType"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="Result:= CouplingFromVid(QueryString(ChannelTypeVid(Channel) + cCOUPLINGQuery))"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(ChannelTypeVid(Channel) + cCOUPLINGCommand + CouplingVid(Value))"/>
+      </Setter>
+    </Property>
+
     <Property Identifier="TSiglentScope.MemorySize" Type="TMemSize" >
       <Getter>
         <Execute Statement="Result:= MemSizeFromVid(QueryString(cMEMORY_SIZEQuery))"/>
@@ -1472,6 +1603,29 @@ end;
         <Execute Statement="WriteString(cMEMORY_SIZECommand + MemSizeVid(Value))"/>
       </Setter>
     </Property>
+
+    <Property Identifier="TSiglentScope.StatusState" Type="TRegisterState">
+      <Parameters>
+        <Parameter Identifier="Bit" Type="TDsoSTB"/>
+      </Parameters>
+      <Getter>
+        <Execute Statement="_StatusStates.Update(ReadSTB)"/>
+        <Execute Statement="Result:= _StatusStates[Bit]"/>
+      </Getter>
+    </Property>
+
+    <Function Identifier="TSiglentScope.StatusChanged" Type="Boolean">
+      <Parameters>
+        <Parameter Identifier="Bit" Type="TDsoSTB"/>
+        <Parameter Identifier="State" Type="TRegisterState" Direction="InputOutput"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="_StatusStates.Update(ReadSTB)"/>
+        <Variable Identifier="NewState" Type="UInt64" Init="_StatusStates[Bit]"/>
+        <Execute Statement="Result:= NewState &lt;&gt; State"/>
+        <Execute Statement="State:= NewState"/>
+      </Block>
+    </Function>
 
     <Procedure Identifier="TSiglentScope.SetTrigger">
       <Parameters>
@@ -1656,6 +1810,14 @@ end;
       </Setter>
     </Property>
 
+    <Property Identifier="TSiglentScope.ServiceRequestMask" Type="TDsoSTBFlag">
+      <Getter>
+        <Execute Statement="Result:= QueryUInt32(cServiceRequestMaskQuery)"/>
+      </Getter>
+      <Setter>
+        <Execute Statement="WriteString(ViFormat(cServiceRequestMaskCommand, Value))"/>
+      </Setter>
+    </Property>
 
     <Property Identifier="TSiglentScope.ActiveFrame" Type="UInt32" >
       <Getter>
@@ -1857,7 +2019,7 @@ end;
         <Execute Statement="WriteString(ChannelTypeVid(Channel) + cTRIG_LEVELCommand + FloatToCode(Value))"/>
       </Block>
     </Procedure>
-    
+
     <Procedure Identifier="TSiglentScope.SetTriggerSlope">
       <Parameters>
         <Parameter Identifier="Channel" Type="TChannelType"/>
@@ -1894,13 +2056,47 @@ end;
       </Block>
     </Procedure>
 
+    <Procedure Identifier="TSiglentScope.Wait">
+      <Block>
+        <Variable Identifier="SaveTimout" Type="UInt32" Init="VisaResource.Timeout"/>
+        <Execute Statement="VisaResource.Timeout:= VI_TMO_INFINITE"/>
+        <TryFinally>
+          <Try>
+            <Execute Statement="WriteString(cWaitCommand)"/>
+          </Try>
+          <Finally>
+            <Execute Statement="VisaResource.Timeout:= SaveTimout"/>
+          </Finally>
+        </TryFinally>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TSiglentScope.Wait">
+      <Parameters>
+        <Parameter Identifier="Time" Type="Extended"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="SaveTimout" Type="UInt32" Init="VisaResource.Timeout"/>
+        <Execute Statement="VisaResource.Timeout:= Round(1000 * Time) + 300"/>
+        <TryFinally>
+          <Try>
+            <Execute Statement="WriteString(cWaitTimeoutCommand + FloatToCode(Time))"/>
+          </Try>
+          <Finally>
+            <Execute Statement="VisaResource.Timeout:= SaveTimout"/>
+          </Finally>
+        </TryFinally>
+      </Block>
+    </Procedure>
+
+
     <Procedure Identifier="TSiglentScope.SaveWaveToFile">
       <Parameters>
         <Parameter Identifier="Filename" Type="string"/>
-        <Parameter Identifier="Wave" Type="string"/>
+        <Parameter Identifier="Wave" Type="ViString"/>
       </Parameters>
       <Block>
-        <Execute Statement="WriteString('WVDT? ' + Wave)"/>
+        <Execute Statement="WriteString(cWVDTQuery + Wave)"/>
         <Object.Use Identifier="BlobStream" Type="TMemoryStream" Expression="ReadBlob(cWaveBlobSize)">
           <Execute Statement="BlobStream.SaveToFile(Filename)"/>
         </Object.Use>
@@ -1976,241 +2172,6 @@ end;
       </Block>
     </Function>
 
-    <Procedure Identifier="TSiglentScope.WaveCapureToFile">
-      <Parameters>
-        <Parameter Identifier="Trace" Type="TTraceType"/>
-        <Parameter Identifier="Filename" Type="string"/>
-        <Parameter Identifier="LimitSamples" Type="Int32"/>
-      </Parameters>
-      <Variables>
-        <Variable Identifier="XmlDoc" Type="IXMLDomDocument"/>
-        <Variable Identifier="RootE" Type="IXMLDomElement"/>
-        <Variable Identifier="DataE" Type="IXMLDomElement"/>
-        <Variable Identifier="PointE" Type="IXMLDomElement"/>
-        <Variable Identifier="VFactor" Type="Extended"/>
-        <Variable Identifier="VOffset" Type="Extended"/>
-        <Variable Identifier="Int32Data" Type="Int32"/>
-        <Variable Identifier="UInt32Data" Type="UInt32"/>
-        <Variable Identifier="AnsiData" Type="AnsiChar"/>
-        <Variable Identifier="FloatValue" Type="Extended"/>
-        <Variable Identifier="ProbeAttenuation" Type="Extended"/>
-        <Variable Identifier="BlockStart" Type="Int32"/>
-        <Variable Identifier="BlockSize" Type="UInt32"/>
-        <Variable Identifier="BlockSizeCount" Type="Int32"/>
-        <Variable Identifier="DescriptionBlockSize" Type="UInt32"/>
-        <Variable Identifier="NumberOfPoints" Type="Int32"/>
-        <Variable Identifier="PointsPerScreen" Type="Int32"/>
-        <Variable Identifier="RawElement" Type="Int32"/>
-        <Variable Identifier="TraceS" Type="ViString"/>
-        <Variable Identifier="Value" Type="Extended"/>
-        <Variable Identifier="Time" Type="Extended"/>
-        <Variable Identifier="TimePerSample" Type="Extended"/>
-      </Variables>
-      <Block>
-        <Variable Identifier="TraceName" Type="string" Init="TraceTypeName(Trace)"/>
-        <sts:Status.Block Text="Format('Capturing waveform %s to file &quot;%s&quot;', TraceName, Filename)" LeaveText="Format('Done capturing waveform %s to file &quot;%s&quot;', TraceName, Filename)">
-          <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
-          <Execute Statement="WaveSetup(0, LimitSamples)"/>
-          <Object.Use Identifier="Stream" Type="TStream" Expression="WaveForm(Trace, 0, TWaveFormFormat.All)">
-            <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
-            <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', Stream.Size, (EndTime-StartTime)/QueryPerformanceFrequency, Stream.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Target="Visa" Condition="DoReportVisa"/>
-            <msx:Document.Create Identifier="XmlDoc"/>
-            <msx:Document.CreateElement Document="XmlDoc" Element="RootE" Name="WaveForm" ParentElement="XmlDoc"/>
-            <msx:Element.SetAttribute Element="RootE" Name="xmlns:xsi" Value="'http://www.w3.org/2001/XMLSchema-instance'"/>
-            <msx:Element.SetAttribute Element="RootE" Name="xsi:noNamespaceSchemaLocation" Namespace="http://www.w3.org/2001/XMLSchema-instance" Value="'WaveForm.xsd'"/>
-            <msx:Document.CreateElement Document="XmlDoc" Element="DataE" Name="Data" ParentElement="RootE"/>
-            <rep:Reporter.Information Text="Format('Stream.Size: %d', Stream.Size)" Target="Visa" Condition="DoReportVisa"/>
-            <sts:Status.Block Text="Format('Processing %d bytes', Stream.Size)">
-              <stm:StateHandler InitialState="SearchDash">
-                <ForLoop Indexer="I" From="0" To="Stream.Size - 1">
-                  <stm:HandleStates>
-                    <stm:State Name="Start">
-                      <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
-                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
-                        <On Select="'A'..'Z'">
-                          <Execute Statement="TraceS:= AnsiData"/>
-                          <stm:SetState Name="InTrace" />
-                        </On>
-                        <Otherwise>
-                          <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
-                        </Otherwise>
-                      </Case>
-                    </stm:State>
-                    <stm:State Name="InTrace">
-                      <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
-                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
-                        <On Select="'A'..'Z', '0'..'9'">
-                          <Execute Statement="TraceS:= TraceS + AnsiData"/>
-                        </On>
-                        <On Select="':'">
-                          <!--<rep:Reporter.Information Text="Format('Trace: %s', TraceS)" Target="Visa" Condition="DoReportVisa"/>-->
-                          <stm:SetState Name="SearchDash" />
-                        </On>
-                        <Otherwise>
-                          <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
-                        </Otherwise>
-                      </Case>
-                    </stm:State>
-                    <stm:State Name="SearchDash">
-                      <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
-                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
-                        <On Select="'#'">
-                          <stm:SetState Name="SearchNine" />
-                        </On>
-                      </Case>
-                    </stm:State>
-                    <stm:State Name="SearchNine">
-                      <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingHeader)"/>
-                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
-                        <On Select="'9'">
-                          <stm:SetState Name="InSucceedingBlockSize" />
-                          <Execute Statement="BlockSizeCount:= 0"/>
-                          <Execute Statement="BlockSize:= 0"/>
-                        </On>
-                      </Case>
-                    </stm:State>
-                    <stm:State Name="InSucceedingBlockSize">
-                      <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingWaveLength)"/>
-                      <Execute Statement="BlockSizeCount:= BlockSizeCount + 1"/>
-                      <Case Expression="CharOrd(AnsiData)" OrdinalType="ansichar" Optimalisation="integermapping">
-                        <On Select="'0'..'9'">
-                          <Execute Statement="BlockSize:= BlockSize * 10 + (CharOrd(AnsiData) - ordC0)"/>
-                        </On>
-                        <Otherwise>
-                          <Raise Expression="Exception.Create(sErrorHeaderParsing)"/>
-                        </Otherwise>
-                      </Case>
-                      <Block Condition="BlockSizeCount = 9">
-                        <Execute Statement="BlockStart:= Stream.Position"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coDescriptionBlockSizeOffset"/>
-                        <Raise Condition="Stream.ReadDataUInt16(DescriptionBlockSize) &lt;&gt; 2" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('DescriptionBlockSize: %d', DescriptionBlockSize)" Target="Visa" Condition="DoReportVisa"/>
-
-                        <rep:Reporter.Information Text="Format('BlockStart: %d', BlockStart)" Target="Visa" Condition="DoReportVisa"/>
-
-
-                        <Execute Statement="Stream.Position:= BlockStart + coNumberOfPointsOffset"/>
-                        <Raise Condition="Stream.ReadDataUInt32(NumberOfPoints) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('Nr. of points: %d', NumberOfPoints)" Target="Visa" Condition="DoReportVisa"/>
-                        <Execute Statement="NumberOfPoints:= LimitSamples" Condition="(LimitSamples &lt;&gt; 0) and (LimitSamples &lt; NumberOfPoints)"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coWaveSizeOffset"/>
-                        <Raise Condition="Stream.ReadDataUInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('WaveSize: %d', UInt32Data)" Target="Visa" Condition="DoReportVisa"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coPointsPerScreen"/>
-                        <Raise Condition="Stream.ReadDataInt32(PointsPerScreen) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('PointsPerScreen: %d', PointsPerScreen)" Target="Visa" Condition="DoReportVisa"/>
-                        <!--<msx:Element.SetAttribute Element="DataE" Name="VUnit" Value="PointsPerScreen"/>-->
-
-                        <Execute Statement="Stream.Position:= BlockStart + coFirstValidPntOffset"/>
-                        <Raise Condition="Stream.ReadDataInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('FirstValidPnt: %d', UInt32Data)" Target="Visa" Condition="DoReportVisa"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coLastValidPntOffset"/>
-                        <Raise Condition="Stream.ReadDataInt32(UInt32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('LastValidPnt: %d', UInt32Data)" Target="Visa" Condition="DoReportVisa"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coVUnitOffset"/>
-                        <Raise Condition="Stream.ReadDataAnsiChar(AnsiData) &lt;&gt; 1" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('VUnit: %s', AnsiData)" Target="Visa" Condition="DoReportVisa"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="VUnit" Value="AnsiData"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coProbeAttenuationOffset"/>
-                        <Raise Condition="Stream.ReadDataSingle(ProbeAttenuation) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('ProbeAttenuation: %g', ProbeAttenuation)" Target="Visa" Condition="DoReportVisa"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="ProbeAttenuation" Value="FloatToCode(ProbeAttenuation)"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coVerticalGainOffset"/>
-                        <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('VerticalGain: %g', FloatValue)" Target="Visa" Condition="DoReportVisa"/>
-                        <Execute Statement="FloatValue:= FloatValue * ProbeAttenuation"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="VDiv" Value="FloatToCode(FloatValue)"/>
-                        <Execute Statement="VFactor:= FloatValue * cVGran"/>
-
-
-                        <Execute Statement="Stream.Position:= BlockStart + coVerticalOffsetOffset"/>
-                        <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('VerticalOffset: %g', FloatValue)" Target="Visa" Condition="DoReportVisa"/>
-                        <Execute Statement="FloatValue:= FloatValue * ProbeAttenuation"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="VOffset" Value="FloatToCode(FloatValue)"/>
-                        <Execute Statement="VOffset:= -FloatValue"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coHorizontalIntervalOffset"/>
-                        <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('HorizontalInterval: %g', FloatValue)" Target="Visa" Condition="DoReportVisa"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="HDiv" Value="FloatToCode(FloatValue * PointsPerScreen / cHDivisions)"/>
-                        <Execute Statement="TimePerSample:= FloatValue"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coHorizontalOffsetOffset"/>
-                        <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('HorizontalOffset: %g', FloatValue)" Target="Visa" Condition="DoReportVisa"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="HOffset" Value="FloatToCode(FloatValue)"/>
-                        <Execute Statement="Time:= FloatValue - PointsPerScreen * TimePerSample * 0.5"/>
-
-                        <!--<Execute Statement="Stream.Position:= BlockStart + coSegmentIndexOffset"/>
-                        <Raise Condition="Stream.ReadDataInt32(Int32Data) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('SegmentIndex: %d', Int32Data)" Target="Visa" Condition="DoReportVisa"/>-->
-
-                        <Execute Statement="Stream.Position:= BlockStart + coNominalBitsOffset"/>
-                        <Raise Condition="Stream.ReadDataUInt16(UInt32Data) &lt;&gt; 2" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('NominalBits: %d', UInt32Data)" Target="Visa" Condition="DoReportVisa"/>
-                        <msx:Element.SetAttribute Element="DataE" Name="NominalBits" Value="IntToStr(UInt32Data)"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coTriggerTimeOffset"/>
-                        <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('TriggerTime: %g', FloatValue)" Target="Visa" Condition="DoReportVisa"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coPixelOffsetOffset"/>
-                        <Raise Condition="Stream.ReadDataDouble(FloatValue) &lt;&gt; 8" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('PixelOffset: %g', FloatValue)" Target="Visa" Condition="DoReportVisa"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + coHorizontalUncertaintyOffset"/>
-                        <Raise Condition="Stream.ReadDataSingle(FloatValue) &lt;&gt; 4" Expression="Exception.Create(sErrorReadingWaveData)"/>
-                        <rep:Reporter.Information Text="Format('HorizontalUncertainty: %g', FloatValue)" Target="Visa" Condition="DoReportVisa"/>
-
-                        <Execute Statement="Stream.Position:= BlockStart + DescriptionBlockSize"/>
-                        <stm:SetState Name="WaveData"/>
-
-                        <!--<rep:Reporter.Information Text="Format('BlockSize: %d', BlockSize)" Target="Visa" Condition="DoReportVisa"/>
-                        <rep:Reporter.Information Text="Format('Stream.Position: %d', Stream.Position)" Target="Visa" Condition="DoReportVisa"/>
-                        <rep:Reporter.Information Text="Format('Stream.Size: %d', Stream.Size)" Target="Visa" Condition="DoReportVisa"/>-->
-                      </Block>
-                    </stm:State>
-                    <stm:State Name="WaveData">
-                      <Raise Condition="Stream.ReadDataInt8(RawElement) &lt;&gt; 1 " Expression="Exception.Create(sErrorReadingWaveData)"/>
-                      <!--<rep:Reporter.Information Text="Format('%d', RawElement)" Target="Visa" Condition="DoReportVisa"/>-->
-                      <Execute Statement="Value:= RawElement * VFactor + VOffset"/>
-                      <msx:Document.CreateElement Document="XmlDoc" Element="PointE" Name="P" ParentElement="DataE"/>
-                      <msx:Element.SetAttribute Element="PointE" Name="X" Value="FloatTocode(Time)"/>
-                      <msx:Element.SetAttribute Element="PointE" Name="Y" Value="FloatTocode(Value)"/>
-                      <Execute Statement="Time:= Time + TimePerSample"/>
-                      <Execute Statement="NumberOfPoints:= NumberOfPoints - 1"/>
-                      <stm:SetState Name="Done" Condition="NumberOfPoints = 0"/>
-                    </stm:State>
-                    <stm:State Name="Done">
-                    </stm:State>
-                  </stm:HandleStates>
-                </ForLoop>
-              </stm:StateHandler>
-            </sts:Status.Block>
-          </Object.Use>
-          <Raise Expression="Exception.Create(Format(sErrorInvalidTraceData, BlockSize))" Condition="NumberOfPoints &lt;&gt; 0"/>
-          <Variable Identifier="WriteStream" Type="TSequentialFileWriteStream" Init="TSequentialFileWriteStream.Create(Filename)"/>
-          <Variable Identifier="Stream" Type="IStream" Init="WriteStream as IStream"/>
-          <Variable Identifier="MXWriter" Type="IMXWriter" Init="CoMXXMLWriter60.Create"/>
-          <Execute Statement="MXWriter.Output:= Stream"/>
-          <Execute Statement="MXWriter.Indent:= True"/>
-          <Execute Statement="MXWriter.encoding:= 'utf-8'"/>
-          <Variable Identifier="Output" Type="Variant" Init="MXWriter"/>
-          <Variable Identifier="XMLReader" Type="ISAXXMLReader" Init="CoSAXXMLReader60.Create"/>
-          <Execute Statement="XMLReader.putContentHandler(MXWriter as ISAXContentHandler)"/>
-          <Execute Statement="XMLReader.Parse(XmlDoc)"/>
-        </sts:Status.Block>
-      </Block>
-    </Procedure>
-
     <Procedure Identifier="LoadSamplesFromStream">
       <Parameters>
         <Parameter Identifier="AcquisitionInfo" Type="TAcquisitionInfo"/>
@@ -2218,7 +2179,7 @@ end;
         <Parameter Identifier="LimitSamples" Type="Int32"/>
       </Parameters>
       <Type>
-        <Enumeration Identifier="TProcessKind" Elements="MultiFrameInitial, MutiFrameUpdate, SingleSum"/>
+        <Enumeration Identifier="TProcessKind" Elements="MultiFrameInitial, MutiFrameUpdate, SingleSum, Samples"/>
       </Type>
       <Variables>
         <Variable Identifier="ProcessKind" Type="TProcessKind"/>
@@ -2240,6 +2201,7 @@ end;
         <Variable Identifier="SamplePointManager" Type="TSamplePointManager"/>
         <Variable Identifier="SingleSample" Type="TSamplePoint32"/>
         <Variable Identifier="PointsPerScreen" Type="Int32"/>
+        <Variable Identifier="Samples" Type="TListInt8"/>
       </Variables>
       <Block>
         <Choose>
@@ -2254,6 +2216,10 @@ end;
                 <Execute Statement="ActiveDataPoint:= SamplePointManager.SampleHead"/>
               </Otherwise>
             </Choose>
+          </When>
+          <When Expression="AcquisitionInfo is TSamplesAcquisitionInfo">
+            <Execute Statement="ProcessKind:= TProcessKind.Samples"/>
+            <Execute Statement="Samples:= TSamplesAcquisitionInfo(AcquisitionInfo).Samples"/>
           </When>
           <When Expression="AcquisitionInfo is TSingleSummedSampleAcquisitionInfo">
             <Execute Statement="ProcessKind:= TProcessKind.SingleSum"/>
@@ -2435,6 +2401,12 @@ end;
                       <rep:Reporter.Information Text="Format('NumberOfPoints: %d', NumberOfPoints)" Target="Visa" Condition="DoReportVisa"/>
                       <stm:SetState Name="WaveDataUpdateSingleSample"/>
                     </On>
+                    <On Select="TProcessKind.Samples">
+                      <Execute Statement="NumberOfPoints:= LimitSamples" Condition="(LimitSamples &gt; 0) and (LimitSamples &lt; NumberOfPoints)"/>
+                      <rep:Reporter.Information Text="Format('NumberOfPoints: %d', NumberOfPoints)" Target="Visa" Condition="DoReportVisa"/>
+                      <Execute Statement="Samples.AddFromStream(Stream, NumberOfPoints)"/>
+                      <stm:SetState Name="Done"/>
+                    </On>
                   </Case>
                 </Block>
               </stm:State>
@@ -2527,24 +2499,95 @@ end;
       </Block>
     </Function>
 
+    <Function Identifier="TSiglentScope.GetSamples" Type="TSamplesAcquisitionInfo">
+      <Parameters>
+        <Parameter Identifier="Trace" Type="TTraceType"/>
+        <Parameter Identifier="Options" Type="TSamplesAcquisitionOptions"/>
+      </Parameters>
+      <Variables>
+        <Variable Identifier="LimitSamples" Type="Int32" Init="0"/>
+      </Variables>
+      <Block>
+        <Execute Statement="Result:= TSamplesAcquisitionInfo.Create"/>
+        <Block Condition="Assigned(Options)">
+          <Execute Statement="LimitSamples:= Options.LimitSamples"/>
+        </Block>
+        <Execute Statement="WaveSetup(0, LimitSamples)"/>
+        <Variable Identifier="StartTime" Type="Int64" Init="QueryPerformanceCounter" />
+        <Object.Use Identifier="Stream" Type="TMemoryStream" Expression="WaveForm(Trace, 0, TWaveFormFormat.All)">
+          <ExitOnAbortRequest/>
+          <Variable Identifier="EndTime" Type="Int64" Init="QueryPerformanceCounter" />
+          <rep:Reporter.Information Text="Format('Read %d bytes in %f seconds (%f MB/s)', Stream.Size, (EndTime-StartTime)/QueryPerformanceFrequency, Stream.Size / ((EndTime-StartTime)/QueryPerformanceFrequency) / (1024*1024))" Target="Visa" Condition="DoReportVisa"/>
+          <sts:Status.Block Text="Format('Processing %d bytes', Stream.Size)" LeaveText="'Done processing data'">
+            <Execute Statement="LoadSamplesFromStream(Result, Stream, LimitSamples)"/>
+          </sts:Status.Block>
+        </Object.Use>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TSiglentScope.SaveSamplesToFile">
+      <Parameters>
+        <Parameter Identifier="AcquisitionInfo" Type="TSamplesAcquisitionInfo"/>
+        <Parameter Identifier="Filename" Type="string"/>
+      </Parameters>
+      <Variables>
+        <Variable Identifier="XmlDoc" Type="IXMLDomDocument"/>
+        <Variable Identifier="RootE" Type="IXMLDomElement"/>
+        <Variable Identifier="DataE" Type="IXMLDomElement"/>
+        <Variable Identifier="PointE" Type="IXMLDomElement"/>
+      </Variables>
+      <Block>
+        <sts:Status.Block Text="Format('Saving samples to file &quot;%s&quot;', Filename)" LeaveText="Format('Done saving samples to file &quot;%s&quot;', Filename)">
+          <Variable Identifier="Samples" Type="TListInt8" Init="AcquisitionInfo.Samples"/>
+          <Variable Identifier="VFactor" Type="Extended" Init="AcquisitionInfo.VFactor"/>
+          <Variable Identifier="VOffset" Type="Extended" Init="AcquisitionInfo.VOffset"/>
+          <Variable Identifier="Time" Type="Extended" Init="AcquisitionInfo.Time"/>
+          <Variable Identifier="TimePerSample" Type="Extended" Init="AcquisitionInfo.TimePerSample"/>
+          <sts:Status.Block Text="Format('Processing %d samples', Samples.Count)" LeaveText="'Done processing samples'">
+            <msx:Document.Create Identifier="XmlDoc"/>
+            <msx:Document.CreateElement Document="XmlDoc" Element="RootE" Name="WaveForm" ParentElement="XmlDoc"/>
+            <msx:Element.SetAttribute Element="RootE" Name="xmlns:xsi" Value="'http://www.w3.org/2001/XMLSchema-instance'"/>
+            <msx:Element.SetAttribute Element="RootE" Name="xsi:noNamespaceSchemaLocation" Namespace="http://www.w3.org/2001/XMLSchema-instance" Value="'WaveForm.xsd'"/>
+            <msx:Document.CreateElement Document="XmlDoc" Element="DataE" Name="Data" ParentElement="RootE"/>
+            <ForLoop Indexer="I" From="0" To="Samples.Count - 1">
+              <msx:Document.CreateElement Document="XmlDoc" Element="PointE" Name="P" ParentElement="DataE"/>
+              <msx:Element.SetAttribute Element="PointE" Name="X" Value="FloatTocode(Time)"/>
+              <msx:Element.SetAttribute Element="PointE" Name="Y" Value="FloatTocode(Samples[I] * VFactor + VOffset)"/>
+              <Execute Statement="Time:= Time + TimePerSample"/>
+            </ForLoop>
+          </sts:Status.Block>
+          <sts:Status.Block Text="'Writing data to file..'" LeaveText="'Done writing data to file'">
+            <Variable Identifier="WriteStream" Type="TSequentialFileWriteStream" Init="TSequentialFileWriteStream.Create(Filename)"/>
+            <Variable Identifier="Stream" Type="IStream" Init="WriteStream as IStream"/>
+            <Variable Identifier="MXWriter" Type="IMXWriter" Init="CoMXXMLWriter60.Create"/>
+            <Execute Statement="MXWriter.Output:= Stream"/>
+            <Execute Statement="MXWriter.Indent:= True"/>
+            <Execute Statement="MXWriter.encoding:= 'utf-8'"/>
+            <Variable Identifier="Output" Type="Variant" Init="MXWriter"/>
+            <Variable Identifier="XMLReader" Type="ISAXXMLReader" Init="CoSAXXMLReader60.Create"/>
+            <Execute Statement="XMLReader.putContentHandler(MXWriter as ISAXContentHandler)"/>
+            <Execute Statement="XMLReader.Parse(XmlDoc)"/>
+          </sts:Status.Block>
+        </sts:Status.Block>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TSiglentScope.WaveCapureToFile">
+      <Parameters>
+        <Parameter Identifier="Trace" Type="TTraceType"/>
+        <Parameter Identifier="Options" Type="TSamplesAcquisitionOptions"/>
+        <Parameter Identifier="Filename" Type="string"/>
+      </Parameters>
+      <Block>
+        <Object.Use Identifier="AcquisitionInfo" Type="TSamplesAcquisitionInfo" Expression="GetSamples(Trace, Options)">
+          <Execute Statement="SaveSamplesToFile(AcquisitionInfo, Filename)"/>
+        </Object.Use>
+      </Block>
+    </Procedure>
+
     <Procedure Identifier="TSiglentScope.Stop">
       <Block>
         <Execute Statement="WriteString(cSTOPCommand)"/>
-      </Block>
-    </Procedure>
-
-    <Procedure Identifier="TSiglentScope.Wait">
-      <Block>
-        <Execute Statement="WriteString(cWAITCommand)"/>
-      </Block>
-    </Procedure>
-
-    <Procedure Identifier="TSiglentScope.Wait">
-      <Parameters>
-        <Parameter Identifier="Time" Type="Extended"/>
-      </Parameters>
-      <Block>
-        <Execute Statement="WriteString(cWAITCommandSpace + FloatToCode(Time))"/>
       </Block>
     </Procedure>
 
@@ -2554,24 +2597,24 @@ end;
       </Block>
     </Procedure>
 
-    <Property Identifier="TSiglentScope.StatusState" Type="TRegisterState">
+    <Property Identifier="TSiglentScope.InternalStatusState" Type="TRegisterState">
       <Parameters>
         <Parameter Identifier="Bit" Type="TStatusBit"/>
       </Parameters>
       <Getter>
-        <Execute Statement="_StatusStates.Update(QueryUInt32(cINRQuery))"/>
-        <Execute Statement="Result:= _StatusStates[Bit]"/>
+        <Execute Statement="_InternalStatusStates.Update(QueryUInt32(cINRQuery))"/>
+        <Execute Statement="Result:= _InternalStatusStates[Bit]"/>
       </Getter>
     </Property>
 
-    <Function Identifier="TSiglentScope.StatusChanged" Type="Boolean">
+    <Function Identifier="TSiglentScope.InternalStatusChanged" Type="Boolean">
       <Parameters>
         <Parameter Identifier="Bit" Type="TStatusBit"/>
         <Parameter Identifier="State" Type="TRegisterState" Direction="InputOutput"/>
       </Parameters>
       <Block>
-        <Execute Statement="_StatusStates.Update(QueryUInt32(cINRQuery))"/>
-        <Variable Identifier="NewState" Type="UInt64" Init="_StatusStates[Bit]"/>
+        <Execute Statement="_InternalStatusStates.Update(QueryUInt32(cINRQuery))"/>
+        <Variable Identifier="NewState" Type="UInt64" Init="_InternalStatusStates[Bit]"/>
         <Execute Statement="Result:= NewState &lt;&gt; State"/>
         <Execute Statement="State:= NewState"/>
       </Block>
@@ -2589,10 +2632,10 @@ end;
     <Function Identifier="TSiglentScope.GetCycleSamples" Type="Integer">
       <Parameters>
         <Parameter Identifier="Frequency" Type="ConvInt"/>
-        <Parameter Identifier="Cycles" Type="UInt32"/>
+        <Parameter Identifier="Cycles" Type="ConvInt"/>
       </Parameters>
       <Block>
-        <Execute Statement="Result:= Round(Cycles * SampleRate / ucCycleFrequency.IntValueToExtended(Frequency))"/>
+        <Execute Statement="Result:= Round(ucPowerLineCycles.IntValueToExtended(Cycles) * SampleRate / ucCycleFrequency.IntValueToExtended(Frequency))"/>
       </Block>
     </Function>
 
@@ -2603,16 +2646,6 @@ end;
       </Parameters>
       <Block>
         <Execute Statement="Result:= ReadConvInt(Key, ucTDiv, Default)"/>
-      </Block>
-    </Function>
-
-    <Function Identifier="TSiglentScopeIniHelper.ConvReadCycleFrequency" Type="ConvInt">
-      <Parameters>
-        <Parameter Identifier="Key" Type="string"/>
-        <Parameter Identifier="Default" Type="string"/>
-      </Parameters>
-      <Block>
-        <Execute Statement="Result:= ReadConvInt(Key, ucCycleFrequency, Default)"/>
       </Block>
     </Function>
 
@@ -2777,6 +2810,8 @@ end;
   </Procedures>
 
   <Finalization>
+    <Free Identifier="CouplingNameIndex"/>
+    <Free Identifier="CouplingVidIndex"/>
     <Free Identifier="TraceTypeNameIndex"/>
     <Free Identifier="ChannelTypeNameIndex"/>
     <Free Identifier="TriggerModeNameIndex"/>

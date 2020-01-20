@@ -25,8 +25,6 @@
     <Alias Identifier="TMappingCaseInSensitiveViStringToInt64" RefersTo="TMappingCaseInSensitiveStringToInt64"/>
     <Alias Identifier="TRegisterState" RefersTo="UInt64"/>
 
-    <Enumeration Identifier="TVisaAttributeState" Elements="NoValue, ValidValue, InvalidValue, PendingChange"/>
-
     <DataClass Identifier="TVisaInstrument" ClassOfIdentifier="TTVisaInstrument">
       <Field Identifier="VisaResource" Type="TVisaResource"/>
     </DataClass>
@@ -67,6 +65,11 @@
       <Field Identifier="Sample" Type="TSamplePoint32"/>
     </DataClass>
 
+    <DataClass Identifier="TSamplesAcquisitionInfo" Inherit="TAcquisitionInfo">
+      <VirtualMethod Identifier="vmFinalize" IsFinalizer="true"/>
+      <Field Identifier="Samples" Type="TListInt8"/>
+    </DataClass>
+
     <DataClass Identifier="TScopeSample">
       <Field Identifier="Time" Type="Extended"/>
       <Field Identifier="Value" Type="Extended"/>
@@ -78,6 +81,9 @@
     </DataClass>
   </Type>
   <Constants>
+    <Constant Identifier="cResetCommand" Type="ViString" Expression="'*RST'"/>
+    <Constant Identifier="cServiceRequestMaskCommand" Type="ViString" Expression="'*SRE %u'"/>
+    <Constant Identifier="cServiceRequestMaskQuery" Type="ViString" Expression="'*SRE?'"/>
     <Constant Identifier="cOPCQuery" Type="ViString" Expression="'*OPC?'"/>
     <Constant Identifier="cIDNQuery" Type="ViString" Expression="'*IDN?'"/>
     <Constant Identifier="viSpace" Type="ViString" Expression="' '"/>
@@ -86,14 +92,16 @@
     <Constant Identifier="sErrorUnsupportedOperation" Type="string" Expression="'Unsupported operation'"/>
     <Constant Identifier="sOn" Type="ViString" Expression="'ON'"/>
     <Constant Identifier="sOff" Type="ViString" Expression="'OFF'"/>
+    <Constant Identifier="VI_TMO_INFINITE" Type="UInt32" Expression="$FFFFFFFF"/>
   </Constants>
 
   <Variables>
     <Variable Identifier="DoReportVisa" Type="Boolean" Init="False"/>
+    <Variable Identifier="ucCycleFrequency" Type="TUnitConvertor" Init="TUnitConvertor.Create(TGranularity.Milli, TSiUnit.Hz)"/>
+    <Variable Identifier="ucPowerLineCycles" Type="TUnitConvertor" Init="TUnitConvertor.Create(TGranularity.Nano, TSiUnit.None)"/>
   </Variables>
 
   <Procedures>
-
     <Function Identifier="TTVisaInstrument.DecodeIDN" Type="Boolean" IsDeterministic="true">
       <Parameters>
         <Parameter Identifier="Value" Type="ViString"/>
@@ -260,6 +268,18 @@
       </Block>
     </Procedure>
 
+    <Constructor Identifier="TSamplesAcquisitionInfo.Create">
+      <Block>
+        <Execute Statement="Samples:= TListInt8.Create"/>
+      </Block>
+    </Constructor>
+
+    <Procedure Identifier="TSamplesAcquisitionInfo.Finalize" VirtualMethod="vmFinalize">
+      <Block>
+        <Execute Statement="Samples.Free"/>
+      </Block>
+    </Procedure>
+    
     <Constructor Identifier="TVisaAtrributeGroup.Create">
       <Parameters>
         <Parameter Identifier="Instrument" Type="TVisaInstrument"/>
@@ -268,55 +288,6 @@
         <Execute Statement="Self.Instrument:= Instrument"/>
       </Block>
     </Constructor>
-
-    <Procedure Identifier="TVisaAtrributeGroup.RaiseAttributeError">
-      <Parameters>
-        <Parameter Identifier="Attribute" Type="string"/>
-      </Parameters>
-      <Block>
-        <Raise Expression="Exception.Create('Attribute ' + Attribute + ' could not be determined')"/>
-      </Block>
-    </Procedure>
-
-    <Procedure Identifier="TVisaAtrributeGroup.SetAttributeStates" VirtualMethod="vmSetAttributeStates">
-      <Parameters>
-        <Parameter Identifier="State" Type="TVisaAttributeState"/>
-      </Parameters>
-      <Block>
-      </Block>
-    </Procedure>
-
-    <Procedure Identifier="TVisaInstrument.BeginRead">
-      <Parameters>
-        <Parameter Identifier="AtrributeGroup" Type="TVisaAtrributeGroup"/>
-      </Parameters>
-      <Block>
-      </Block>
-    </Procedure>
-
-    <Procedure Identifier="TVisaInstrument.EndRead">
-      <Parameters>
-        <Parameter Identifier="AtrributeGroup" Type="TVisaAtrributeGroup"/>
-      </Parameters>
-      <Block>
-      </Block>
-    </Procedure>
-
-    <Procedure Identifier="TVisaInstrument.BeginWrite">
-      <Parameters>
-        <Parameter Identifier="AtrributeGroup" Type="TVisaAtrributeGroup"/>
-      </Parameters>
-      <Block>
-      </Block>
-    </Procedure>
-
-    <Procedure Identifier="TVisaInstrument.EndWrite">
-      <Parameters>
-        <Parameter Identifier="AtrributeGroup" Type="TVisaAtrributeGroup"/>
-      </Parameters>
-      <Block>
-      </Block>
-    </Procedure>
 
     <Function Identifier="CreateVisaSession" Type="IVisaSession">
       <Parameters>
@@ -336,7 +307,7 @@
         <Execute Statement="Self.VisaResource:= VisaResource" />
       </Block>
     </Constructor>
-
+    
     <Function Identifier="TVISAInstrument.ReadFloat" Type="Extended">
       <Block>
         <Variable Identifier="readResult" Type="ViString" Init="VisaResource.AnsiReadNoLF"/>
@@ -569,6 +540,12 @@
       </Setter>
     </Property>
 
+    <Procedure Identifier="TVISAInstrument.Reset">
+      <Block>
+        <Execute Statement="WriteString(cResetCommand)"/>
+      </Block>
+    </Procedure>
+
     <Function Identifier="TVISAInstrument.IsOperationComplete" Type="Boolean">
       <Constants>
         <Constant Identifier="c0" Type="ViString" Expression="'0'"/>
@@ -692,5 +669,24 @@
       </Block>
     </Function>
 
+    <Function Identifier="TIniHelper.ConvReadCycleFrequency" Type="ConvInt">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="string"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= ReadConvInt(Key, ucCycleFrequency, Default)"/>
+      </Block>
+    </Function>
+
+    <Function Identifier="TIniHelper.ConvReadPowerLineCycles" Type="ConvInt">
+      <Parameters>
+        <Parameter Identifier="Key" Type="string"/>
+        <Parameter Identifier="Default" Type="string"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Result:= ReadConvInt(Key, ucPowerLineCycles, Default)"/>
+      </Block>
+    </Function>
   </Procedures>
 </pkg:Library>
