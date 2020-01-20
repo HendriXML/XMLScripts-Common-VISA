@@ -1,0 +1,185 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<pkg:Library
+  xsi:schemaLocation="urn:schemas-www-wisware.nl-scriptingpackages ../XmlSchemas.Common.XmlScript/XMLScripting.Packages.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:pkg="urn:schemas-www-wisware.nl-scriptingpackages"
+  xmlns:sys="urn:schemas-www-wisware.nl-xmlscripting"
+  xmlns:ado="urn:schemas-www-wisware.nl-xmlscripting-ado"
+  xmlns:fil="urn:schemas-www-wisware.nl-xmlscripting-filemanagement"
+  xmlns:fwl="urn:schemas-www-wisware.nl-xmlscripting-windowsfirewall"
+  xmlns:inx="urn:schemas-www-wisware.nl-xmlscripting-index"
+  xmlns:lil="urn:schemas-www-wisware.nl-xmlscripting-linkedlist"
+  xmlns:msx="urn:schemas-www-wisware.nl-xmlscripting-xml"
+  xmlns:reg="urn:schemas-www-wisware.nl-xmlscripting-registry"
+  xmlns:rep="urn:schemas-www-wisware.nl-xmlscripting-report"
+  xmlns:sts="urn:schemas-www-wisware.nl-xmlscripting-showstatus"
+  xmlns:syu="urn:schemas-www-wisware.nl-xmlscripting-sysutils"
+  xmlns:stm="urn:schemas-www-wisware.nl-xmlscripting-statemanagement">
+
+  <Type>
+    <DataClass Identifier="TCalibrationPoint">
+      <Field Identifier="InputValue" Type="Extended"/>
+      <Field Identifier="OutputValue" Type="Extended"/>
+      <Field Identifier="Next" Type="TCalibrationPoint"/>
+    </DataClass>
+
+    <DataClass Identifier="TCalibrationDataManager">
+      <VirtualMethod Identifier="vmFinalize" IsFinalizer="true"/>
+      <Field Identifier="Head" Type="TCalibrationPoint"/>
+      <Field Identifier="Tail" Type="TCalibrationPoint"/>
+    </DataClass>
+  </Type>
+
+  <Procedures>
+
+    <Procedure Identifier="TCalibrationDataManager.Clear">
+      <Block>
+        <lil:LinkedList.Iterate Head="Head" ItemType="TCalibrationPoint" RunningItem="Item" Next="Item.Next">
+          <Free Expression="Item"/>
+        </lil:LinkedList.Iterate>
+        <Execute Statement="Tail:= ObjNil"/>
+        <Execute Statement="Head:= ObjNil"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TCalibrationDataManager.AddPoint">
+      <Parameters>
+        <Parameter Identifier="InputValue" Type="Extended"/>
+        <Parameter Identifier="OutputValue" Type="Extended"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="NewPoint" Type="TCalibrationPoint" Init="TCalibrationPoint.Create(InputValue, OutputValue)"/>
+        <Choose>
+          <When Expression="Assigned(Head)">
+            <Execute Statement="Tail.Next:= NewPoint"/>
+          </When>
+          <Otherwise>
+            <Execute Statement="Head:= NewPoint"/>
+          </Otherwise>
+        </Choose>
+        <Execute Statement="Tail:= NewPoint"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TCalibrationDataManager.SaveToFile">
+      <Parameters>
+        <Parameter Identifier="Filename" Type="string"/>
+      </Parameters>
+      <Block>
+        <Variable Identifier="XmlDoc" Type="IXMLDomDocument"/>
+        <Variable Identifier="CalibrationDataE" Type="IXMLDomElement"/>
+        <Variable Identifier="PointE" Type="IXMLDomElement"/>
+        <msx:Document.Create Identifier="XmlDoc"/>
+        <msx:Document.CreateElement Document="XmlDoc" Element="CalibrationDataE" Name="CalibrationData" ParentElement="XmlDoc"/>
+        <msx:Element.SetAttribute Element="CalibrationDataE" Name="xmlns:xsi" Value="'http://www.w3.org/2001/XMLSchema-instance'"/>
+        <msx:Element.SetAttribute Element="CalibrationDataE" Name="xsi:noNamespaceSchemaLocation" Namespace="http://www.w3.org/2001/XMLSchema-instance" Value="'Calibration.xsd'"/>
+        <lil:LinkedList.Iterate Head="Head" ItemType="TCalibrationPoint" RunningItem="Item" Next="Item.Next">
+          <msx:Document.CreateElement Document="XmlDoc" Element="PointE" Name="Point" ParentElement="CalibrationDataE"/>
+          <msx:Element.SetAttribute Element="PointE" Name="Input" Value="FloatTocode(Item.InputValue)"/>
+          <msx:Element.SetAttribute Element="PointE" Name="Output" Value="FloatTocode(Item.OutputValue)"/>
+        </lil:LinkedList.Iterate>
+        <Variable Identifier="WriteStream" Type="TSequentialFileWriteStream" Init="TSequentialFileWriteStream.Create(Filename)"/>
+        <Variable Identifier="Stream" Type="IStream" Init="WriteStream as IStream"/>
+        <Variable Identifier="MXWriter" Type="IMXWriter" Init="CoMXXMLWriter60.Create"/>
+        <Execute Statement="MXWriter.Output:= Stream"/>
+        <Execute Statement="MXWriter.Indent:= True"/>
+        <Execute Statement="MXWriter.encoding:= 'utf-8'"/>
+        <Variable Identifier="Output" Type="Variant" Init="MXWriter"/>
+        <Variable Identifier="XMLReader" Type="ISAXXMLReader" Init="CoSAXXMLReader60.Create"/>
+        <Execute Statement="XMLReader.putContentHandler(MXWriter as ISAXContentHandler)"/>
+        <Execute Statement="XMLReader.Parse(XmlDoc)"/>
+      </Block>
+    </Procedure>
+
+    <Procedure Identifier="TCalibrationDataManager.LoadFromFile">
+      <Parameters>
+        <Parameter Identifier="Filename" Type="string"/>
+      </Parameters>
+      <Block>
+        <Execute Statement="Clear"/>
+        <Variable Identifier="XmlDoc" Type="IXMLDomDocument"/>
+        <msx:Document.Create Identifier="XmlDoc"/>
+        <msx:Document.LoadFromFile Document="XmlDoc" Filename="Filename"/>
+        <Variable Identifier="Head" Type="TCalibrationPoint" Init="ObjNil"/>
+        <Variable Identifier="Tail" Type="TCalibrationPoint" Init="ObjNil"/>
+        <Variable Identifier="Item" Type="TCalibrationPoint"/>
+        <stm:StateHandler InitialState="FirstItem">
+          <msx:Node.IterateChilds Node="XmlDoc">
+            <msx:OnElement baseName="'CalibrationData'">
+              <msx:Block>
+                <msx:Node.IterateChilds Node="Node">
+                  <msx:OnElement baseName="'Point'">
+                    <msx:Attribute baseName="'Input'" />
+                    <msx:Attribute baseName="'Output'"/>
+                    <msx:Block>
+                      <Variable Identifier="InputValue" Type="Extended" Init="CodeToFloat(Input.Text)"/>
+                      <Variable Identifier="OutputValue" Type="Extended" Init="CodeToFloat(Output.Text)"/>
+                      <stm:HandleStates>
+                        <stm:State Name="FirstItem">
+                          <Execute Statement="Head:= TCalibrationPoint.Create(InputValue, OutputValue)"/>
+                          <Execute Statement="Tail:= Head"/>
+                          <stm:SetState Name="AddItem"/>
+                        </stm:State>
+                        <stm:State Name="AddItem">
+                          <Execute Statement="Item:= TCalibrationPoint.Create(InputValue, OutputValue)"/>
+                          <Execute Statement="Tail.Next:= Item"/>
+                          <Execute Statement="Tail:= Item"/>
+                        </stm:State>
+                      </stm:HandleStates>
+                    </msx:Block>
+                  </msx:OnElement>
+                </msx:Node.IterateChilds>
+              </msx:Block>
+            </msx:OnElement>
+          </msx:Node.IterateChilds>
+        </stm:StateHandler>
+        <Execute Statement="Self.Head:= Head"/>
+        <Execute Statement="Self.Tail:= Tail"/>
+      </Block>
+    </Procedure>
+
+    <Function Identifier="TCalibrationDataManager.CreateReverseInterpolater" Type="TLineairInterpolater">
+      <Block>
+        <rep:Reporter.Information Text="'TCalibrationDataManager.CreateReverseInterpolater'"/>
+        <Execute Statement="Result:= TLineairInterpolater.Create"/>
+        <Execute Statement="Result.BeginUpdate"/>
+        <TryFinally>
+          <Try>
+            <lil:LinkedList.Iterate Head="Head" ItemType="TCalibrationPoint" RunningItem="Item" Next="Item.Next">
+              <Execute Statement="Result.AddValue(Item.OutputValue, Item.InputValue)"/>
+            </lil:LinkedList.Iterate>
+          </Try>
+          <Finally>
+            <Execute Statement="Result.EndUpdate"/>
+          </Finally>
+        </TryFinally>
+      </Block>
+    </Function>
+
+    <Function Identifier="TCalibrationDataManager.CreateInterpolater" Type="TLineairInterpolater">
+      <Block>
+        <rep:Reporter.Information Text="'TCalibrationDataManager.CreateInterpolater'"/>
+        <Execute Statement="Result:= TLineairInterpolater.Create"/>
+        <Execute Statement="Result.BeginUpdate"/>
+        <TryFinally>
+          <Try>
+            <lil:LinkedList.Iterate Head="Head" ItemType="TCalibrationPoint" RunningItem="Item" Next="Item.Next">
+              <Execute Statement="Result.AddValue(Item.InputValue, Item.OutputValue)"/>
+            </lil:LinkedList.Iterate>
+          </Try>
+          <Finally>
+            <Execute Statement="Result.EndUpdate"/>
+          </Finally>
+        </TryFinally>
+      </Block>
+    </Function>
+
+    <Procedure Identifier="TCalibrationDataManager.Finalize" VirtualMethod="vmFinalize">
+      <Block>
+        <Execute Statement="Clear"/>
+      </Block>
+    </Procedure>
+
+  </Procedures>
+</pkg:Library>
