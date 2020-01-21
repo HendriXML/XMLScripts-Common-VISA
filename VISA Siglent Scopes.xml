@@ -2549,6 +2549,14 @@ end;
             <msx:Element.SetAttribute Element="RootE" Name="xmlns:xsi" Value="'http://www.w3.org/2001/XMLSchema-instance'"/>
             <msx:Element.SetAttribute Element="RootE" Name="xsi:noNamespaceSchemaLocation" Namespace="http://www.w3.org/2001/XMLSchema-instance" Value="'WaveForm.xsd'"/>
             <msx:Document.CreateElement Document="XmlDoc" Element="DataE" Name="Data" ParentElement="RootE"/>
+            <msx:Element.SetAttribute Element="DataE" Name="Count" Value="Format('%d', Samples.Count)"/>
+            <msx:Element.SetAttribute Element="DataE" Name="VFactor" Value="FloatTocode(AcquisitionInfo.VFactor)"/>
+            <msx:Element.SetAttribute Element="DataE" Name="VUnit" Value="AcquisitionInfo.VUnit"/>
+            <msx:Element.SetAttribute Element="DataE" Name="ProbeAttenuation" Value="FloatTocode(AcquisitionInfo.ProbeAttenuation)"/>
+            <msx:Element.SetAttribute Element="DataE" Name="VDiv" Value="FloatTocode(AcquisitionInfo.VDiv)"/>
+            <msx:Element.SetAttribute Element="DataE" Name="VOffset" Value="FloatTocode(AcquisitionInfo.VOffset)"/>
+            <msx:Element.SetAttribute Element="DataE" Name="HDiv" Value="FloatTocode(AcquisitionInfo.HDiv)"/>
+            <msx:Element.SetAttribute Element="DataE" Name="HOffset" Value="FloatTocode(AcquisitionInfo.HOffset)"/>
             <ForLoop Indexer="I" From="0" To="Samples.Count - 1">
               <msx:Document.CreateElement Document="XmlDoc" Element="PointE" Name="P" ParentElement="DataE"/>
               <msx:Element.SetAttribute Element="PointE" Name="X" Value="FloatTocode(Time)"/>
